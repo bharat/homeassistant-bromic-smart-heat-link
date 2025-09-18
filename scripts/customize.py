@@ -24,10 +24,14 @@ from pathlib import Path
 
 def read_origin_from_git_config(repo_root: Path) -> str | None:
     """
-    Return the remote.origin URL using best-effort strategies:
-    1) Read from the Git config file, handling both .git directory and .git file (worktrees/submodules).
+    Read the origin from the Git config file.
+
+    Use best-effort strategies:
+    1) Read from the Git config file, handling both .git directory and .git file
+       (worktrees/submodules).
     2) Fallback to `git config --get remote.origin.url`.
     """
+
     def _parse_config(config_path: Path) -> str | None:
         parser = configparser.ConfigParser()
         try:
@@ -35,7 +39,9 @@ def read_origin_from_git_config(repo_root: Path) -> str | None:
         except (OSError, configparser.Error):
             return None
         for section in parser.sections():
-            if section.strip() == 'remote "origin"' and parser.has_option(section, "url"):
+            if section.strip() == 'remote "origin"' and parser.has_option(
+                section, "url"
+            ):
                 return parser.get(section, "url").strip()
         return None
 
@@ -69,7 +75,7 @@ def read_origin_from_git_config(repo_root: Path) -> str | None:
 
     # Case 3: fallback to calling git
     try:
-        proc = subprocess.run(  # noqa: S603
+        proc = subprocess.run(
             ("git", "config", "--get", "remote.origin.url"),
             cwd=str(repo_root),
             check=False,
@@ -121,9 +127,11 @@ def to_snake_case(name: str) -> str:
 
 
 def to_camel_caps(name: str) -> str:
-    """Convert a name to CamelCaps, preserving existing CamelCase/PascalCase.
+    """
+    Convert a name to CamelCaps, preserving existing CamelCase/PascalCase.
 
-    - If the input is already camel/PascalCase without separators, keep it (ensure leading capital).
+    - If the input is already camel/PascalCase without separators, keep it
+      (ensure leading capital).
     - Otherwise, split on non-alphanumerics and title-case each token.
     """
     # Already camel-like and contains both lower and upper letters
