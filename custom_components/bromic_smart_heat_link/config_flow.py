@@ -1,19 +1,18 @@
 """Config flow for Bromic Smart Heat Link integration."""
+
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    CONF_CONTROLLERS,
     CONF_CONTROLLER_TYPE,
+    CONF_CONTROLLERS,
     CONF_ID_LOCATION,
     CONF_LEARNED_BUTTONS,
     CONF_SERIAL_PORT,
@@ -21,13 +20,15 @@ from .const import (
     CONTROLLER_TYPE_ONOFF,
     DIMMER_BUTTONS,
     DOMAIN,
-    LEARN_TIMEOUT,
     MAX_ID_LOCATION,
     MIN_ID_LOCATION,
     ONOFF_BUTTONS,
 )
-from .exceptions import BromicConnectionError, BromicLearningError
+from .exceptions import BromicLearningError
 from .hub import BromicHub
+
+if TYPE_CHECKING:
+    from homeassistant.data_entry_flow import FlowResult
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 await self._test_connection(user_input[CONF_SERIAL_PORT])
-            except CannotConnect:
+            except CannotConnectError:
                 errors["base"] = "cannot_connect"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
@@ -75,11 +76,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Create schema with discovered ports
         if self._discovered_ports:
-            port_options = {port["device"]: f"{port['device']} - {port['description']}" 
-                           for port in self._discovered_ports}
-            schema = vol.Schema({
-                vol.Required(CONF_SERIAL_PORT): vol.In(port_options),
-            })
+            port_options = {
+                port["device"]: f"{port['device']} - {port['description']}"
+                for port in self._discovered_ports
+            }
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_SERIAL_PORT): vol.In(port_options),
+                }
+            )
         else:
             schema = STEP_USER_DATA_SCHEMA
 
@@ -87,9 +92,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=schema,
             errors=errors,
-            description_placeholders={
-                "port_count": str(len(self._discovered_ports))
-            }
+            description_placeholders={"port_count": str(len(self._discovered_ports))},
         )
 
     async def _test_connection(self, port: str) -> None:
@@ -99,8 +102,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await hub.async_connect()
             await hub.async_test_connection()
         except Exception as err:
-            _LOGGER.error("Connection test failed: %s", err)
-            raise CannotConnect from err
+            _LOGGER.exception("Connection test failed")
+            raise CannotConnectError from err
         finally:
             await hub.async_disconnect()
 
@@ -126,7 +129,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self._current_button: int = 1
 
     async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
+        self, _user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
         return self.async_show_menu(
@@ -139,11 +142,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Add a new controller."""
         errors: dict[str, str] = {}
-        
+
         if user_input is not None:
             id_location = user_input[CONF_ID_LOCATION]
             controller_type = user_input[CONF_CONTROLLER_TYPE]
-            
+
             # Check if ID is already used
             controllers = self.config_entry.options.get(CONF_CONTROLLERS, {})
             if str(id_location) in controllers:
@@ -154,30 +157,37 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 self._learning_type = controller_type
                 self._learning_buttons = {}
                 self._current_button = 1
-                
+
                 return await self.async_step_learn_buttons()
 
         # Get used IDs
         controllers = self.config_entry.options.get(CONF_CONTROLLERS, {})
-        used_ids = [int(id_str) for id_str in controllers.keys()]
-        available_ids = [i for i in range(MIN_ID_LOCATION, MAX_ID_LOCATION + 1) 
-                        if i not in used_ids]
+        used_ids = [int(id_str) for id_str in controllers]
+        available_ids = [
+            i for i in range(MIN_ID_LOCATION, MAX_ID_LOCATION + 1) if i not in used_ids
+        ]
 
         if not available_ids:
             return self.async_show_form(
-                step_id="add_controller",
-                errors={"base": "no_available_ids"}
+                step_id="add_controller", errors={"base": "no_available_ids"}
             )
 
-        schema = vol.Schema({
-            vol.Required(CONF_ID_LOCATION): vol.In({
-                id_val: f"ID {id_val}" for id_val in available_ids[:10]  # Show first 10
-            }),
-            vol.Required(CONF_CONTROLLER_TYPE): vol.In({
-                CONTROLLER_TYPE_ONOFF: "ON/OFF Controller (4 buttons)",
-                CONTROLLER_TYPE_DIMMER: "Dimmer Controller (7 buttons)",
-            }),
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_ID_LOCATION): vol.In(
+                    {
+                        id_val: f"ID {id_val}"
+                        for id_val in available_ids[:10]  # Show first 10
+                    }
+                ),
+                vol.Required(CONF_CONTROLLER_TYPE): vol.In(
+                    {
+                        CONTROLLER_TYPE_ONOFF: "ON/OFF Controller (4 buttons)",
+                        CONTROLLER_TYPE_DIMMER: "Dimmer Controller (7 buttons)",
+                    }
+                ),
+            }
+        )
 
         return self.async_show_form(
             step_id="add_controller",
@@ -193,9 +203,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return await self.async_step_init()
 
         # Get button definitions
-        buttons = (DIMMER_BUTTONS if self._learning_type == CONTROLLER_TYPE_DIMMER 
-                  else ONOFF_BUTTONS)
-        
+        buttons = (
+            DIMMER_BUTTONS
+            if self._learning_type == CONTROLLER_TYPE_DIMMER
+            else ONOFF_BUTTONS
+        )
+
         if user_input is not None:
             if user_input.get("learn_button"):
                 # Perform learning
@@ -211,15 +224,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             "button_name": buttons[self._current_button]["name"],
                             "button_number": str(self._current_button),
                             "id_location": str(self._learning_id),
-                        }
+                        },
                     )
-                
+
             if user_input.get("skip_button"):
                 self._learning_buttons[self._current_button] = False
-            
+
             # Move to next button
             self._current_button += 1
-            
+
             # Check if we're done
             if self._current_button > len(buttons):
                 return await self._finish_learning()
@@ -227,11 +240,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Show current button learning form
         button_info = buttons[self._current_button]
         learned_count = sum(self._learning_buttons.values())
-        
-        schema = vol.Schema({
-            vol.Optional("learn_button", default=False): bool,
-            vol.Optional("skip_button", default=False): bool,
-        })
+
+        schema = vol.Schema(
+            {
+                vol.Optional("learn_button", default=False): bool,
+                vol.Optional("skip_button", default=False): bool,
+            }
+        )
 
         return self.async_show_form(
             step_id="learn_buttons",
@@ -242,9 +257,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "id_location": str(self._learning_id),
                 "learned_count": str(learned_count),
                 "total_buttons": str(len(buttons)),
-                "controller_type": ("Dimmer" if self._learning_type == CONTROLLER_TYPE_DIMMER 
-                                  else "ON/OFF"),
-            }
+                "controller_type": (
+                    "Dimmer"
+                    if self._learning_type == CONTROLLER_TYPE_DIMMER
+                    else "ON/OFF"
+                ),
+            },
         )
 
     async def _learn_button(self, id_location: int, button: int) -> None:
@@ -252,23 +270,27 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Get hub from integration data
         hub_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
         if not hub_data:
-            raise BromicLearningError("Integration not initialized")
-        
+            message = "Integration not initialized"
+            raise BromicLearningError(message)
+
         hub: BromicHub = hub_data["hub"]
-        
+
         if not hub.connected:
-            raise BromicLearningError("Device not connected")
+            message = "Device not connected"
+            raise BromicLearningError(message)
 
         try:
             # Send learning command
             response = await hub.async_send_command(id_location, button)
-            if not response.success:
-                raise BromicLearningError(f"Learning failed: {response.message}")
-                
         except Exception as err:
-            _LOGGER.error("Learning failed for ID %d, Button %d: %s", 
-                         id_location, button, err)
-            raise BromicLearningError(f"Learning failed: {err}") from err
+            _LOGGER.exception(
+                "Learning failed for ID %d, Button %d", id_location, button
+            )
+            message = f"Learning failed: {err}"
+            raise BromicLearningError(message) from err
+        if not response.success:
+            message = f"Learning failed: {response.message}"
+            raise BromicLearningError(message)
 
     async def _finish_learning(self) -> FlowResult:
         """Finish the learning process and save configuration."""
@@ -300,48 +322,55 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage existing controllers."""
         controllers = self.config_entry.options.get(CONF_CONTROLLERS, {})
-        
+
         if not controllers:
             return self.async_show_form(
-                step_id="manage_controllers",
-                errors={"base": "no_controllers"}
+                step_id="manage_controllers", errors={"base": "no_controllers"}
             )
 
         if user_input is not None:
             controller_id = user_input["controller_id"]
             action = user_input["action"]
-            
+
             if action == "delete":
                 # Remove controller
                 new_controllers = controllers.copy()
                 del new_controllers[controller_id]
-                
+
                 new_options = self.config_entry.options.copy()
                 new_options[CONF_CONTROLLERS] = new_controllers
-                
+
                 # Reload integration
                 self.hass.async_create_task(
                     self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 )
-                
+
                 return self.async_create_entry(title="", data=new_options)
 
         # Create controller list
         controller_options = {}
         for id_str, controller_info in controllers.items():
             controller_type = controller_info[CONF_CONTROLLER_TYPE]
-            type_name = "Dimmer" if controller_type == CONTROLLER_TYPE_DIMMER else "ON/OFF"
+            type_name = (
+                "Dimmer" if controller_type == CONTROLLER_TYPE_DIMMER else "ON/OFF"
+            )
             learned_buttons = controller_info.get(CONF_LEARNED_BUTTONS, {})
             learned_count = sum(learned_buttons.values())
-            
-            controller_options[id_str] = f"ID {id_str} ({type_name}) - {learned_count} buttons"
 
-        schema = vol.Schema({
-            vol.Required("controller_id"): vol.In(controller_options),
-            vol.Required("action"): vol.In({
-                "delete": "Delete Controller",
-            }),
-        })
+            controller_options[id_str] = (
+                f"ID {id_str} ({type_name}) - {learned_count} buttons"
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required("controller_id"): vol.In(controller_options),
+                vol.Required("action"): vol.In(
+                    {
+                        "delete": "Delete Controller",
+                    }
+                ),
+            }
+        )
 
         return self.async_show_form(
             step_id="manage_controllers",
@@ -361,5 +390,5 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnectError(HomeAssistantError):
     """Error to indicate we cannot connect."""

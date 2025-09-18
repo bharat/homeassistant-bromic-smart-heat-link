@@ -1,4 +1,5 @@
 """Exceptions for Bromic Smart Heat Link integration."""
+
 from __future__ import annotations
 
 from homeassistant.exceptions import HomeAssistantError
