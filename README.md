@@ -1,46 +1,146 @@
-# Notice
+# Bromic Smart Heat Link Integration for Home Assistant
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
-HAVE FUN! 😎
+A Home Assistant custom integration for controlling Bromic outdoor heaters via the Bromic Smart Heat Link device using RS232 serial communication.
 
-## Why?
+## Features
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+- **Full Controller Support**: Works with both ON/OFF (4-button) and Dimmer (7-button) controllers
+- **Multiple Controllers**: Support for up to 50 controller ID locations
+- **Guided Learning Process**: Easy-to-follow wizard for pairing with your existing remote controls
+- **Multiple Entity Types**: 
+  - Switches for ON/OFF controllers
+  - Lights with brightness control for dimmer controllers
+  - Buttons for dim up/down functions
+  - Select entities for quick power level presets
+- **Diagnostics**: Built-in diagnostics and error reporting
+- **Services**: Developer services for testing and manual control
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+## Hardware Requirements
 
-## What?
+- Bromic Smart Heat Link device
+- USB-to-RS232 adapter
+- Compatible Bromic heater controllers (ON/OFF or Dimmer type)
+- Existing paired remote controls for learning process
 
-This repository contains multiple files, here is a overview:
+## Installation
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+### HACS (Recommended)
 
-## How?
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the three dots in the top right corner
+4. Select "Custom repositories"
+5. Add this repository URL and select "Integration" as the category
+6. Install the integration
+7. Restart Home Assistant
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+### Manual Installation
 
-## Next steps
+1. Download the latest release
+2. Copy the `custom_components/bromic_smart_heat_link` folder to your Home Assistant `config/custom_components/` directory
+3. Restart Home Assistant
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+## Configuration
+
+### Initial Setup
+
+1. Go to **Settings** → **Devices & Services** → **Add Integration**
+2. Search for "Bromic Smart Heat Link"
+3. Select your USB-to-RS232 serial port from the discovered list
+4. The integration will test the connection and complete setup
+
+### Adding Controllers
+
+After initial setup, you can add controllers through the integration options:
+
+1. Go to **Settings** → **Devices & Services** → **Bromic Smart Heat Link** → **Configure**
+2. Select **"Add New Controller"**
+3. Choose an available ID location (1-50)
+4. Select controller type:
+   - **ON/OFF Controller**: 4 buttons (Ch1 ON/OFF, Ch2 ON/OFF)
+   - **Dimmer Controller**: 7 buttons (100%, 75%, 50%, 25%, Dim Up, Dim Down, Off)
+
+### Learning Process
+
+For each controller, you'll go through a guided learning process:
+
+1. **Press P3 on Remote**: Press and hold the P3 button on your existing remote
+2. **Wait for Beep**: The controller will beep within 5 seconds
+3. **Click Learn**: Immediately click "Learn Button" in the Home Assistant interface
+4. **Repeat**: Continue for each required button
+
+The learning process teaches the Smart Heat Link to recognize commands that Home Assistant will send, without affecting your existing remote functionality.
+
+## Entities Created
+
+### ON/OFF Controllers
+- `switch.bromic_id{X}_channel_1` - Channel 1 switch
+- `switch.bromic_id{X}_channel_2` - Channel 2 switch
+
+### Dimmer Controllers  
+- `light.bromic_id{X}_channel_1` - Channel 1 dimmable light
+- `light.bromic_id{X}_channel_2` - Channel 2 dimmable light
+- `select.bromic_id{X}_power_level` - Power level preset selector
+- `button.bromic_id{X}_dim_up` - Dim up button (if learned)
+- `button.bromic_id{X}_dim_down` - Dim down button (if learned)
+
+## Protocol Details
+
+The integration uses the Bromic Smart Heat Link RS232 protocol:
+
+- **Baud Rate**: 19200
+- **Data Bits**: 8
+- **Parity**: None
+- **Stop Bits**: 1
+- **Flow Control**: None
+
+Commands follow the format: `T + ID(2 bytes) + Button(2 bytes) + Checksum`
+
+## Services
+
+The integration provides several services for advanced users:
+
+- `bromic_smart_heat_link.learn_button` - Learn a specific button
+- `bromic_smart_heat_link.send_raw_command` - Send raw hex commands
+- `bromic_smart_heat_link.clear_controller` - Clear controller (if supported)
+
+## Troubleshooting
+
+### Connection Issues
+- Verify USB-to-RS232 adapter is connected
+- Check serial port permissions (add HA user to `dialout` group on Linux)
+- Use stable device paths like `/dev/serial/by-id/*` instead of `/dev/ttyUSB0`
+
+### Learning Issues
+- Ensure controller and remote are paired and working
+- Press P3 and wait for beep before clicking "Learn Button"
+- Stay within 30m RF range during learning
+- Check for RF interference from other devices
+
+### Entity Issues
+- Entities only appear for successfully learned button combinations
+- Restart Home Assistant after adding/removing controllers
+- Check diagnostics page for detailed information
+
+## Safety Notes
+
+⚠️ **Important Safety Information**:
+- Installation should be performed by a licensed electrician
+- Keep low-voltage wiring separate from mains power
+- Follow local electrical codes and regulations
+- Ensure proper grounding and safety measures
+
+## Support
+
+- [GitHub Issues](https://github.com/bharat/homeassistant-bromic-smart-heat-link/issues)
+- [Home Assistant Community Forum](https://community.home-assistant.io/)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+This integration is not affiliated with Bromic Heating. Use at your own risk. Always follow proper safety procedures when working with electrical equipment.

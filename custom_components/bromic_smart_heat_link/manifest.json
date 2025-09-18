@@ -1,12 +1,13 @@
 {
   "domain": "bromic_smart_heat_link",
-  "name": "BromicSmartHeatLink",
+  "name": "Bromic Smart Heat Link",
   "codeowners": [
-    "@ludeeus"
+    "@bharat"
   ],
   "config_flow": true,
   "documentation": "https://github.com/bharat/homeassistant-bromic-smart-heat-link",
-  "iot_class": "cloud_polling",
+  "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/bharat/homeassistant-bromic-smart-heat-link/issues",
+  "requirements": ["pyserial>=3.5"],
   "version": "0.1.0"
 }

@@ -27,7 +27,7 @@
         "description": "Manage your Bromic controllers and settings.",
         "menu_options": {
           "add_controller": "Add New Controller",
-          "manage_controllers": "Manage Controllers", 
+          "manage_controllers": "Manage Controllers",
           "advanced_settings": "Advanced Settings"
         }
       },
@@ -69,6 +69,52 @@
       "no_available_ids": "All ID locations (1-50) are in use. Please remove a controller first.",
       "learning_failed": "Failed to learn button {button_number} ({button_name}) for ID {id_location}: {error}",
       "no_controllers": "No controllers configured. Add a controller first."
+    }
+  },
+  "entity": {
+    "switch": {
+      "bromic_switch": {
+        "name": "Bromic Switch"
+      }
+    },
+    "light": {
+      "bromic_light": {
+        "name": "Bromic Light"
+      }
+    },
+    "button": {
+      "bromic_dim_up": {
+        "name": "Dim Up"
+      },
+      "bromic_dim_down": {
+        "name": "Dim Down"
+      }
+    },
+    "select": {
+      "bromic_power_level": {
+        "name": "Power Level",
+        "state": {
+          "off": "Off",
+          "25%": "25%",
+          "50%": "50%",
+          "75%": "75%",
+          "100%": "100%"
+        }
+      }
+    }
+  },
+  "services": {
+    "learn_button": {
+      "name": "Learn Button",
+      "description": "Learn a specific button command for a controller."
+    },
+    "clear_controller": {
+      "name": "Clear Controller",
+      "description": "Clear all learned commands for a controller."
+    },
+    "send_raw_command": {
+      "name": "Send Raw Command",
+      "description": "Send a raw hex command to the device."
     }
   }
 }

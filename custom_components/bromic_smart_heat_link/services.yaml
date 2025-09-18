@@ -1,0 +1,47 @@
+learn_button:
+  name: Learn Button
+  description: Learn a specific button command for a controller ID location.
+  fields:
+    id_location:
+      name: ID Location
+      description: Controller ID location (1-50)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 50
+          step: 1
+    button_number:
+      name: Button Number
+      description: Button number to learn (1-7)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 7
+          step: 1
+
+clear_controller:
+  name: Clear Controller
+  description: Clear all learned commands for a controller ID location.
+  fields:
+    id_location:
+      name: ID Location
+      description: Controller ID location (1-50)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 50
+          step: 1
+
+send_raw_command:
+  name: Send Raw Command
+  description: Send a raw hex command to the device (for debugging/testing).
+  fields:
+    raw_command:
+      name: Raw Command
+      description: Hex command string (e.g., "540001000156")
+      required: true
+      selector:
+        text:
