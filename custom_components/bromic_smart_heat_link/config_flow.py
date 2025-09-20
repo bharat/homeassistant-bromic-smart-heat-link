@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -235,7 +236,9 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             if action in {"learn_now", "retry"}:
                 # Send the learn command but do not advance; user will confirm
                 try:
-                    await self._learn_button(self._learning_id, current_button)
+                    await self._send_learn_with_retries(
+                        self._learning_id, current_button
+                    )
                 except BromicLearningError as err:
                     return self.async_show_form(
                         step_id="learn_buttons",
@@ -323,6 +326,22 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
         if not response.success:
             message = f"Learning failed: {response.message}"
             raise BromicLearningError(message)
+
+    async def _send_learn_with_retries(
+        self, id_location: int, button: int, attempts: int = 3, delay: float = 0.8
+    ) -> None:
+        """
+        Send the learn command a few times to align with the P3 window.
+
+        Some controllers only store the code if the command arrives slightly
+        after P3 starts. We resend a couple times, spaced by a short delay,
+        to improve reliability. Each send must succeed (ACK) or we abort.
+        """
+        for attempt in range(1, max(1, attempts) + 1):
+            await self._learn_button(id_location, button)
+            if attempt < attempts:
+                await self.hass.async_add_executor_job(lambda: None)  # no-op yield
+                await asyncio.sleep(delay)
 
     async def _finish_learning(self) -> FlowResult:
         """Finish the learning process and save configuration."""

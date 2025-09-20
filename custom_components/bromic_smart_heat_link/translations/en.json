@@ -46,7 +46,7 @@
       },
       "learn_buttons": {
         "title": "Learn Controller Buttons",
-        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Step {button_number} of {total_buttons}: Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control (you will hear a continuous tone).\n2. Click **Send Learn Command** as the tone begins.\n3. When you hear the ~5‑second confirmation tone, click **I heard the confirmation tone** to advance.\n4. If you didn't hear it, click **I didn't hear it – retry** to resend without advancing.\n\nIf you don't need this button, choose **Skip**.",
+        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control (you will hear a continuous tone).\n2. Click **Send Learn Command** as the tone begins.\n3. When you hear the ~5‑second confirmation tone, click **I heard the confirmation tone** to advance.\n4. If you didn't hear it, click **I didn't hear it – retry** to resend without advancing.\n\nIf you don't need this button, choose **Skip**.",
         "data": {
           "action": "Action"
         }
