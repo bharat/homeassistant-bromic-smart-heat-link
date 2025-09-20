@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 
-from .const import CONF_SERIAL_PORT, DOMAIN
+from .const import CONF_SERIAL_PORT, DOMAIN, MANUFACTURER, MODEL, SW_VERSION
 from .hub import BromicHub
 from .services import async_remove_services, async_setup_services
 
@@ -48,6 +49,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = {
         "hub": hub,
     }
+
+    # Ensure a parent "bridge" device exists for this serial port so that
+    # entity DeviceInfo.via_device references a valid device
+    port_id = hub.port.replace("/", "_").replace(":", "_")
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, port_id)},
+        name=f"Bromic Bridge ({hub.port})",
+        manufacturer=MANUFACTURER,
+        model=f"{MODEL} Bridge",
+        sw_version=SW_VERSION,
+    )
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
