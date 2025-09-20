@@ -146,7 +146,8 @@ class BromicLight(BromicEntity, LightEntity):
             }
             self._attr_brightness = name_to_brightness.get(option, 255)
             self._attr_is_on = self._attr_brightness > 0
-        self.async_write_ha_state()
+        # Thread-safe state update (dispatcher may call from executor thread)
+        self.schedule_update_ha_state()
 
     async def async_added_to_hass(self) -> None:
         """Connect dispatcher once hass is available."""
