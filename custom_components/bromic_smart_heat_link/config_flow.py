@@ -275,7 +275,7 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 vol.Required("action", default="learn_now"): vol.In(
                     {
                         "learn_now": "Send Learn Command",
-                        "confirm_heard": "I heard the confirmation tone",
+                        "confirm_heard": "I heard the confirmation tones",
                         "retry": "I didn't hear it - retry",
                         "skip": "Skip this button",
                     }
@@ -481,6 +481,9 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
 
                 # Persist to options
                 new_options = self.config_entry.options.copy()
+                old_port = new_options.get(
+                    CONF_SERIAL_PORT, self.config_entry.data[CONF_SERIAL_PORT]
+                )
                 new_options[CONF_SERIAL_PORT] = new_port
 
                 # Update the entry title so the UI reflects the new port
@@ -493,6 +496,19 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                     _LOGGER.debug(
                         "Failed to update entry title for new port: %s", new_port
                     )
+
+                # Remove stale bridge device for previous port
+                try:
+                    if old_port != new_port:
+                        dev_reg = dr.async_get(self.hass)
+                        old_port_id = old_port.replace("/", "_").replace(":", "_")
+                        device = dev_reg.async_get_device(
+                            identifiers={(DOMAIN, old_port_id)}
+                        )
+                        if device:
+                            dev_reg.async_remove_device(device.id)
+                except Exception:  # noqa: BLE001
+                    _LOGGER.debug("Failed to remove old bridge device for %s", old_port)
 
                 # Reload integration to apply new port
                 self.hass.async_create_task(
