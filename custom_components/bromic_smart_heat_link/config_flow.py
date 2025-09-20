@@ -215,7 +215,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         if user_input is not None:
-            if user_input.get("learn_button"):
+            action = user_input.get("action")
+            if action == "learn":
                 # Perform learning
                 try:
                     await self._learn_button(self._learning_id, self._current_button)
@@ -231,8 +232,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             "id_location": str(self._learning_id),
                         },
                     )
-
-            if user_input.get("skip_button"):
+            elif action == "skip":
                 self._learning_buttons[self._current_button] = False
 
             # Move to next button
@@ -248,8 +248,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         schema = vol.Schema(
             {
-                vol.Optional("learn_button", default=False): bool,
-                vol.Optional("skip_button", default=False): bool,
+                vol.Required("action", default="learn"): vol.In(
+                    {
+                        "learn": "Learn Button",
+                        "skip": "Skip This Button",
+                    }
+                )
             }
         )
 
@@ -416,6 +420,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 # Persist to options
                 new_options = self.config_entry.options.copy()
                 new_options[CONF_SERIAL_PORT] = new_port
+
+                # Update the entry title so the UI reflects the new port
+                try:
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        title=f"Bromic Smart Heat Link ({new_port})",
+                    )
+                except Exception:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "Failed to update entry title for new port: %s", new_port
+                    )
 
                 # Reload integration to apply new port
                 self.hass.async_create_task(
