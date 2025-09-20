@@ -11,6 +11,7 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
+    BUTTON_SEQUENCE_DIMMER,
     CONF_CONTROLLER_TYPE,
     CONF_CONTROLLERS,
     CONF_ID_LOCATION,
@@ -126,7 +127,8 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
         self._learning_id: int | None = None
         self._learning_type: str | None = None
         self._learning_buttons: dict[int, bool] = {}
-        self._current_button: int = 1
+        self._button_sequence: list[int] = []
+        self._button_index: int = 0
 
     async def async_step_init(
         self, _user_input: dict[str, Any] | None = None
@@ -161,7 +163,13 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 self._learning_id = id_location
                 self._learning_type = controller_type
                 self._learning_buttons = {}
-                self._current_button = 1
+                # Define learning order per controller type
+                if controller_type == CONTROLLER_TYPE_DIMMER:
+                    self._button_sequence = BUTTON_SEQUENCE_DIMMER.copy()
+                else:
+                    # Basic ON/OFF fallback sequence if ever used
+                    self._button_sequence = [1, 2]
+                self._button_index = 0
 
                 return await self.async_step_learn_buttons()
 
@@ -214,36 +222,42 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             else ONOFF_BUTTONS
         )
 
+        # Determine the current button code from the sequence
+        try:
+            current_button = self._button_sequence[self._button_index]
+        except IndexError:
+            return await self._finish_learning()
+
         if user_input is not None:
             action = user_input.get("action")
             if action == "learn":
                 # Perform learning
                 try:
-                    await self._learn_button(self._learning_id, self._current_button)
-                    self._learning_buttons[self._current_button] = True
+                    await self._learn_button(self._learning_id, current_button)
+                    self._learning_buttons[current_button] = True
                 except BromicLearningError as err:
                     return self.async_show_form(
                         step_id="learn_buttons",
                         errors={"base": "learning_failed"},
                         description_placeholders={
                             "error": str(err),
-                            "button_name": buttons[self._current_button]["name"],
-                            "button_number": str(self._current_button),
+                            "button_name": buttons[current_button]["name"],
+                            "button_number": str(current_button),
                             "id_location": str(self._learning_id),
                         },
                     )
             elif action == "skip":
-                self._learning_buttons[self._current_button] = False
+                self._learning_buttons[current_button] = False
 
             # Move to next button
-            self._current_button += 1
+            self._button_index += 1
 
             # Check if we're done
-            if self._current_button > len(buttons):
+            if self._button_index >= len(self._button_sequence):
                 return await self._finish_learning()
 
         # Show current button learning form
-        button_info = buttons[self._current_button]
+        button_info = buttons[current_button]
         learned_count = sum(self._learning_buttons.values())
 
         schema = vol.Schema(
@@ -262,10 +276,10 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             data_schema=schema,
             description_placeholders={
                 "button_name": button_info["name"],
-                "button_number": str(self._current_button),
+                "button_number": str(current_button),
                 "id_location": str(self._learning_id),
                 "learned_count": str(learned_count),
-                "total_buttons": str(len(buttons)),
+                "total_buttons": str(len(self._button_sequence)),
                 "controller_type": (
                     "Dimmer"
                     if self._learning_type == CONTROLLER_TYPE_DIMMER
