@@ -30,8 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Bromic Smart Heat Link from a config entry."""
     _LOGGER.debug("Setting up Bromic Smart Heat Link integration")
 
-    # Get configuration
-    port = entry.data[CONF_SERIAL_PORT]
+    # Get configuration (options override data for live port changes)
+    port = entry.options.get(CONF_SERIAL_PORT, entry.data[CONF_SERIAL_PORT])
 
     # Initialize the hub
     hub = BromicHub(hass, port)

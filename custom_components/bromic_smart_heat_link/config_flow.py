@@ -134,7 +134,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add_controller", "manage_controllers", "advanced_settings"],
+            menu_options=[
+                "change_serial_port",
+                "add_controller",
+                "manage_controllers",
+                "advanced_settings",
+            ],
         )
 
     async def async_step_add_controller(
@@ -387,6 +392,53 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="advanced_settings",
             data_schema=vol.Schema({}),  # Add advanced settings here if needed
+        )
+
+    async def async_step_change_serial_port(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Change the serial port for the hub without re-adding the integration."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            # Validate by attempting a quick connection
+            new_port = user_input[CONF_SERIAL_PORT]
+            hub = BromicHub(self.hass, new_port)
+            try:
+                await hub.async_connect()
+                await hub.async_test_connection()
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug("Port validation failed for %s", new_port)
+                errors["base"] = "cannot_connect"
+            else:
+                await hub.async_disconnect()
+
+                # Persist to options
+                new_options = self.config_entry.options.copy()
+                new_options[CONF_SERIAL_PORT] = new_port
+
+                # Reload integration to apply new port
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                )
+
+                return self.async_create_entry(title="", data=new_options)
+
+        # Offer discovered ports if we have them
+        discovered = await BromicHub.discover_ports()
+        if discovered:
+            port_options = {
+                port["device"]: f"{port['device']} - {port['description']}"
+                for port in discovered
+            }
+            schema = vol.Schema({vol.Required(CONF_SERIAL_PORT): vol.In(port_options)})
+        else:
+            schema = vol.Schema({vol.Required(CONF_SERIAL_PORT): str})
+
+        return self.async_show_form(
+            step_id="change_serial_port",
+            data_schema=schema,
+            errors=errors,
         )
 
 
