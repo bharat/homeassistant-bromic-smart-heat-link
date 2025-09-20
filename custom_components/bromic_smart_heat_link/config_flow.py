@@ -9,6 +9,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     BUTTON_SEQUENCE_DIMMER,
@@ -208,7 +210,7 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             errors=errors,
         )
 
-    async def async_step_learn_buttons(
+    async def async_step_learn_buttons(  # noqa: PLR0911
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Learn button commands."""
@@ -252,14 +254,14 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 self._button_index += 1
                 if self._button_index >= len(self._button_sequence):
                     return await self._finish_learning()
-                # fall through to re-render below
+                return await self.async_step_learn_buttons()
 
             if action == "skip":
                 self._learning_buttons[current_button] = False
                 self._button_index += 1
                 if self._button_index >= len(self._button_sequence):
                     return await self._finish_learning()
-                # fall through to re-render below
+                return await self.async_step_learn_buttons()
 
         # Show current button learning form
         button_info = buttons[current_button]
@@ -370,7 +372,27 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 new_options = self.config_entry.options.copy()
                 new_options[CONF_CONTROLLERS] = new_controllers
 
-                # Reload integration
+                # Purge device and its entities from registries
+                dev_reg = dr.async_get(self.hass)
+                ent_reg = er.async_get(self.hass)
+                port_id = (
+                    self.config_entry.options.get(
+                        CONF_SERIAL_PORT, self.config_entry.data[CONF_SERIAL_PORT]
+                    )
+                    .replace("/", "_")
+                    .replace(":", "_")
+                )
+                device_identifier = (DOMAIN, f"{port_id}_{controller_id}")
+                device = dev_reg.async_get_device(identifiers={device_identifier})
+                if device:
+                    # Remove entities then device
+                    for ent_id in list(ent_reg.entities):
+                        entry = ent_reg.async_get(ent_id)
+                        if entry and entry.device_id == device.id:
+                            ent_reg.async_remove(ent_id)
+                    dev_reg.async_remove_device(device.id)
+
+                # Reload integration to reflect removal
                 self.hass.async_create_task(
                     self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 )
