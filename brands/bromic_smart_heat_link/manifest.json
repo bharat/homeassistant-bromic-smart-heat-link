@@ -1,0 +1,9 @@
+{
+    "name": "Bromic Smart Heat Link",
+    "domain": "bromic_smart_heat_link",
+    "logos": {
+        "logo": "logo.png",
+        "logo_dark": "logo_dark.png",
+        "icon": "icon.png"
+    }
+}

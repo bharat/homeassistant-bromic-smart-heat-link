@@ -1,6 +1,8 @@
 # Bromic Smart Heat Link Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+[![CI](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/ci.yml/badge.svg)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/ci.yml)
+[![Hassfest](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/hassfest.yml/badge.svg)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/hassfest.yml)
 
 A Home Assistant custom integration for controlling Bromic outdoor heaters via the Bromic Smart Heat Link device using RS232 serial communication.
 
@@ -9,7 +11,7 @@ A Home Assistant custom integration for controlling Bromic outdoor heaters via t
 - **Full Controller Support**: Works with both ON/OFF (4-button) and Dimmer (7-button) controllers
 - **Multiple Controllers**: Support for up to 50 controller ID locations
 - **Guided Learning Process**: Easy-to-follow wizard for pairing with your existing remote controls
-- **Multiple Entity Types**: 
+- **Multiple Entity Types**:
   - Switches for ON/OFF controllers
   - Lights with brightness control for dimmer controllers
   - Buttons for dim up/down functions
@@ -30,11 +32,9 @@ A Home Assistant custom integration for controlling Bromic outdoor heaters via t
 
 1. Open HACS in Home Assistant
 2. Go to "Integrations"
-3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL and select "Integration" as the category
-6. Install the integration
-7. Restart Home Assistant
+3. Click the three dots in the top right corner → "Custom repositories"
+4. Add this repository URL and select "Integration" as the category
+5. Install the integration and restart Home Assistant
 
 ### Manual Installation
 
@@ -68,8 +68,9 @@ For each controller, you'll go through a guided learning process:
 
 1. **Press P3 on Remote**: Press and hold the P3 button on your existing remote
 2. **Wait for Beep**: The controller will beep within 5 seconds
-3. **Click Learn**: Immediately click "Learn Button" in the Home Assistant interface
-4. **Repeat**: Continue for each required button
+3. **Click Send Learn Command** as the tone begins. You may hear multiple short confirmation tones; that’s expected.
+4. **Confirm**: Click "I heard the confirmation tones" to advance, or "Retry" if you didn’t hear them.
+5. **Repeat** for each required button
 
 The learning process teaches the Smart Heat Link to recognize commands that Home Assistant will send, without affecting your existing remote functionality.
 
@@ -79,7 +80,7 @@ The learning process teaches the Smart Heat Link to recognize commands that Home
 - `switch.bromic_id{X}_channel_1` - Channel 1 switch
 - `switch.bromic_id{X}_channel_2` - Channel 2 switch
 
-### Dimmer Controllers  
+### Dimmer Controllers
 - `light.bromic_id{X}_channel_1` - Channel 1 dimmable light
 - `light.bromic_id{X}_channel_2` - Channel 2 dimmable light
 - `select.bromic_id{X}_power_level` - Power level preset selector
@@ -112,6 +113,7 @@ The integration provides several services for advanced users:
 - Verify USB-to-RS232 adapter is connected
 - Check serial port permissions (add HA user to `dialout` group on Linux)
 - Use stable device paths like `/dev/serial/by-id/*` instead of `/dev/ttyUSB0`
+- Refer to the [Bromic Smart Heat Link Installation Guide](docs/Bromic-Smart-Heat-Link-Installation-Guide.pdf)
 
 ### Learning Issues
 - Ensure controller and remote are paired and working

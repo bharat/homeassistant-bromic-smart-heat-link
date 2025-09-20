@@ -1,0 +1,16 @@
+name: Brand assets lint
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify image assets exist (placeholder)
+        run: |
+          test -d custom_components/bromic_smart_heat_link || exit 0
+          echo "OK"
