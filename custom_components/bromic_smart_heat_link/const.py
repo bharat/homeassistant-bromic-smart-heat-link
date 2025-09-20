@@ -107,6 +107,9 @@ SW_VERSION: Final = "Bridge"
 ENTITY_ID_FORMAT: Final = "{domain}.{name}"
 UNIQUE_ID_FORMAT: Final = "{domain}_{port_id}_{id_location}_ch{channel}"
 
+# Dispatcher signal format for syncing UI state across entities
+SIGNAL_LEVEL_FMT: Final = f"{DOMAIN}_level_{{port_id}}_{{id_location}}"
+
 # Default configuration
 DEFAULT_NAME: Final = "Bromic Smart Heat Link"
 DEFAULT_SCAN_INTERVAL: Final = 30  # seconds (for diagnostics only)

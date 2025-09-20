@@ -5,11 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ColorMode,
-    LightEntity,
-)
+from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -20,6 +17,7 @@ from .const import (
     DIMMER_BUTTONS,
     DOMAIN,
     OFF_BUTTON_CODE,
+    SIGNAL_LEVEL_FMT,
 )
 from .entity import BromicEntity
 
@@ -128,6 +126,44 @@ class BromicLight(BromicEntity, LightEntity):
             button = level_info["button"]
             if self._learned_buttons.get(button, False):
                 self._available_levels[brightness] = level_info
+
+        # Prepare dispatcher signal for syncing with power level select
+        self._level_signal = SIGNAL_LEVEL_FMT.format(
+            port_id=self._hub.port.replace("/", "_").replace(":", "_"),
+            id_location=id_location,
+        )
+        self._level_unsub = None
+
+    def _on_level_change(self, option: str) -> None:
+        """Handle power level select changes to sync on/off state."""
+        if option == "Off":
+            self._attr_is_on = False
+            self._attr_brightness = 0
+        else:
+            # Set a representative brightness when level selected
+            name_to_brightness = {
+                info["name"]: b for b, info in BRIGHTNESS_LEVELS.items()
+            }
+            self._attr_brightness = name_to_brightness.get(option, 255)
+            self._attr_is_on = self._attr_brightness > 0
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Connect dispatcher once hass is available."""
+        await super().async_added_to_hass()
+        if self.hass and self._level_unsub is None:
+            self._level_unsub = async_dispatcher_connect(
+                self.hass, self._level_signal, self._on_level_change
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Disconnect dispatcher on removal."""
+        await super().async_will_remove_from_hass()
+        if self._level_unsub is not None:
+            try:
+                self._level_unsub()
+            finally:
+                self._level_unsub = None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

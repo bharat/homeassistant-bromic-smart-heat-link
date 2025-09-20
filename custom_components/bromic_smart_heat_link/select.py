@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -15,6 +16,7 @@ from .const import (
     CONTROLLER_TYPE_DIMMER,
     DIMMER_BUTTONS,
     DOMAIN,
+    SIGNAL_LEVEL_FMT,
 )
 from .entity import BromicEntity
 
@@ -147,9 +149,10 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
         success = await self.async_send_command(button_code)
         if success:
             self._attr_current_option = option
-            # Keep light entity in sync: set on/off based on option
-            if option == "Off":
-                self._attr_is_on = False
-            else:
-                self._attr_is_on = True
+            # Broadcast new level to peer entities for state sync
+            port_id = self._hub.port.replace("/", "_").replace(":", "_")
+            signal = SIGNAL_LEVEL_FMT.format(
+                port_id=port_id, id_location=self._id_location
+            )
+            async_dispatcher_send(self.hass, signal, option)
             self.async_write_ha_state()
