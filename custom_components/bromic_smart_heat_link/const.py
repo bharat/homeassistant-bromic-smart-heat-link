@@ -43,7 +43,7 @@ MIN_ID_LOCATION: Final = 1
 MAX_ID_LOCATION: Final = 50
 
 # Protocol limits
-MAX_BUTTON_CODE: Final = 7
+MAX_BUTTON_CODE: Final = 8
 MIN_STD_RESPONSE_LENGTH: Final = 3
 MIN_FRAME_LENGTH: Final = 6
 
@@ -62,12 +62,12 @@ DIMMER_BUTTONS: Final = {
     4: {"name": "25%", "function": "set_brightness", "level": 25},
     5: {"name": "Dim Up", "function": "dim_up"},
     6: {"name": "Dim Down", "function": "dim_down"},
-    7: {"name": "Off", "function": "turn_off"},
+    8: {"name": "Off", "function": "turn_off"},
 }
 
 # Brightness level mappings (HA 0-255 to Bromic levels)
 BRIGHTNESS_LEVELS: Final = {
-    0: {"button": 7, "name": "Off"},  # 0% -> Button 7 (Off)
+    0: {"button": 8, "name": "Off"},  # 0% -> Button 8 (Off)
     64: {"button": 4, "name": "25%"},  # 1-64 -> Button 4 (25%)
     128: {"button": 3, "name": "50%"},  # 65-128 -> Button 3 (50%)
     191: {"button": 2, "name": "75%"},  # 129-191 -> Button 2 (75%)
