@@ -230,11 +230,10 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
 
         if user_input is not None:
             action = user_input.get("action")
-            if action == "learn":
-                # Perform learning
+            if action in {"learn_now", "retry"}:
+                # Send the learn command but do not advance; user will confirm
                 try:
                     await self._learn_button(self._learning_id, current_button)
-                    self._learning_buttons[current_button] = True
                 except BromicLearningError as err:
                     return self.async_show_form(
                         step_id="learn_buttons",
@@ -246,15 +245,21 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                             "id_location": str(self._learning_id),
                         },
                     )
-            elif action == "skip":
+                # Stay on same step
+
+            if action == "confirm_heard":
+                self._learning_buttons[current_button] = True
+                self._button_index += 1
+                if self._button_index >= len(self._button_sequence):
+                    return await self._finish_learning()
+                # fall through to re-render below
+
+            if action == "skip":
                 self._learning_buttons[current_button] = False
-
-            # Move to next button
-            self._button_index += 1
-
-            # Check if we're done
-            if self._button_index >= len(self._button_sequence):
-                return await self._finish_learning()
+                self._button_index += 1
+                if self._button_index >= len(self._button_sequence):
+                    return await self._finish_learning()
+                # fall through to re-render below
 
         # Show current button learning form
         button_info = buttons[current_button]
@@ -262,10 +267,12 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
 
         schema = vol.Schema(
             {
-                vol.Required("action", default="learn"): vol.In(
+                vol.Required("action", default="learn_now"): vol.In(
                     {
-                        "learn": "Learn Button",
-                        "skip": "Skip This Button",
+                        "learn_now": "Send Learn Command",
+                        "confirm_heard": "I heard the confirmation tone",
+                        "retry": "I didn't hear it - retry",
+                        "skip": "Skip this button",
                     }
                 )
             }
