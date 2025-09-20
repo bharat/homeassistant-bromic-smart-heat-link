@@ -147,4 +147,9 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
         success = await self.async_send_command(button_code)
         if success:
             self._attr_current_option = option
+            # Keep light entity in sync: set on/off based on option
+            if option == "Off":
+                self._attr_is_on = False
+            else:
+                self._attr_is_on = True
             self.async_write_ha_state()
