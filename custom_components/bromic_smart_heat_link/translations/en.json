@@ -23,11 +23,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Bromic Smart Heat Link Options",
+        "title": "Bromic Smart Heat Link",
         "description": "Manage your Bromic controllers and settings.",
         "menu_options": {
+          "change_serial_port": "Change Serial Port",
           "add_controller": "Add New Controller",
-          "manage_controllers": "Manage Controllers", 
+          "manage_controllers": "Manage Controllers",
           "advanced_settings": "Advanced Settings"
         }
       },
@@ -45,10 +46,9 @@
       },
       "learn_buttons": {
         "title": "Learn Controller Buttons",
-        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Step {button_number} of {total_buttons}: Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control\n2. Wait for the controller to beep (within 5 seconds)\n3. Click **Learn Button** below immediately after the beep\n4. Wait for confirmation, then proceed to the next button\n\nIf you don't need this button, you can skip it.",
+        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Step {button_number} of {total_buttons}: Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control\n2. Wait for the controller to beep (within 5 seconds)\n3. Choose **Action = Learn** and click **Submit** immediately after the beep\n4. Wait for confirmation, then proceed to the next button\n\nIf you don't need this button, choose **Skip**.",
         "data": {
-          "learn_button": "Learn Button",
-          "skip_button": "Skip This Button"
+          "action": "Action"
         }
       },
       "manage_controllers": {
