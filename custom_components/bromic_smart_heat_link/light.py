@@ -19,6 +19,7 @@ from .const import (
     CONTROLLER_TYPE_DIMMER,
     DIMMER_BUTTONS,
     DOMAIN,
+    OFF_BUTTON_CODE,
 )
 from .entity import BromicEntity
 
@@ -50,39 +51,36 @@ async def async_setup_entry(
         controller_type = controller_info[CONF_CONTROLLER_TYPE]
         learned_buttons = controller_info.get(CONF_LEARNED_BUTTONS, {})
 
-        # Only create light entities for dimmer controllers
+        # Only create a single aggregate light for dimmer controllers
+        # (abstract channels)
         if controller_type == CONTROLLER_TYPE_DIMMER:
-            # Create light entities for each channel
-            for channel in [1, 2]:
-                # Check if essential buttons are learned (OFF and one brightness level)
-                brightness_buttons = [1, 2, 3, 4]  # 100%, 75%, 50%, 25%
+            brightness_buttons = [1, 2, 3, 4]
+            # Require explicitly learned Off button per configuration
+            has_off = learned_buttons.get(OFF_BUTTON_CODE, False)
+            has_brightness = any(
+                learned_buttons.get(btn, False) for btn in brightness_buttons
+            )
 
-                has_off = learned_buttons.get(7, False)
-                has_brightness = any(
-                    learned_buttons.get(btn, False) for btn in brightness_buttons
+            if has_off and has_brightness:
+                entities.append(
+                    BromicLight(
+                        hub=hub,
+                        id_location=id_location,
+                        channel=1,  # abstracted
+                        controller_type=controller_type,
+                        learned_buttons=learned_buttons,
+                    )
                 )
-
-                if has_off and has_brightness:
-                    entities.append(
-                        BromicLight(
-                            hub=hub,
-                            id_location=id_location,
-                            channel=channel,
-                            controller_type=controller_type,
-                            learned_buttons=learned_buttons,
-                        )
-                    )
-                else:
-                    _LOGGER.warning(
-                        (
-                            "Skipping light ID%d Ch%d - off/brightness not learned "
-                            "(OFF=%s, Brightness=%s)"
-                        ),
-                        id_location,
-                        channel,
-                        has_off,
-                        has_brightness,
-                    )
+            else:
+                _LOGGER.warning(
+                    (
+                        "Skipping light ID%d - off/brightness not learned "
+                        "(OFF=%s, Brightness=%s)"
+                    ),
+                    id_location,
+                    has_off,
+                    has_brightness,
+                )
 
     if entities:
         async_add_entities(entities)

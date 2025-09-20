@@ -44,6 +44,7 @@ MAX_ID_LOCATION: Final = 50
 
 # Protocol limits
 MAX_BUTTON_CODE: Final = 8
+OFF_BUTTON_CODE: Final = 8
 MIN_STD_RESPONSE_LENGTH: Final = 3
 MIN_FRAME_LENGTH: Final = 6
 
@@ -67,12 +68,15 @@ DIMMER_BUTTONS: Final = {
 
 # Brightness level mappings (HA 0-255 to Bromic levels)
 BRIGHTNESS_LEVELS: Final = {
-    0: {"button": 8, "name": "Off"},  # 0% -> Button 8 (Off)
+    0: {"button": OFF_BUTTON_CODE, "name": "Off"},  # 0% -> Off button
     64: {"button": 4, "name": "25%"},  # 1-64 -> Button 4 (25%)
     128: {"button": 3, "name": "50%"},  # 65-128 -> Button 3 (50%)
     191: {"button": 2, "name": "75%"},  # 129-191 -> Button 2 (75%)
     255: {"button": 1, "name": "100%"},  # 192-255 -> Button 1 (100%)
 }
+
+# Learning sequence for dimmer controllers (show Off last)
+BUTTON_SEQUENCE_DIMMER: Final = [1, 2, 3, 4, 5, 6, OFF_BUTTON_CODE]
 
 # Error codes from Bromic documentation
 ERROR_CODES: Final = {
