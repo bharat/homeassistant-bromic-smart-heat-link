@@ -32,4 +32,5 @@ jobs:
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
           category: integration
-          # Ensure brand assets are present before submission
+          # Skip central brands repo check while assets are pending in HA brands
+          ignore: brands

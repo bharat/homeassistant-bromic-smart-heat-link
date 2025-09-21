@@ -8,9 +8,7 @@
         "AU",
         "NZ",
         "CA",
-        "GB",
-        "EU"
+        "GB"
     ],
-    "domain": "bromic_smart_heat_link",
-    "iot_class": "Assumed State"
+    "content_in_root": false
 }

@@ -8,6 +8,10 @@
   "documentation": "https://github.com/bharat/homeassistant-bromic-smart-heat-link",
   "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/bharat/homeassistant-bromic-smart-heat-link/issues",
-  "requirements": ["pyserial>=3.5"],
+  "logo": "brands/bromic_smart_heat_link/logo.png",
+  "icon": "brands/bromic_smart_heat_link/icon.png",
+  "requirements": [
+    "pyserial>=3.5"
+  ],
   "version": "0.1.0"
 }
