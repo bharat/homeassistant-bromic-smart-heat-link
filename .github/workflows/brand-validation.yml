@@ -1,4 +1,4 @@
-name: Brand assets lint
+name: Brand
 
 on:
   pull_request:
