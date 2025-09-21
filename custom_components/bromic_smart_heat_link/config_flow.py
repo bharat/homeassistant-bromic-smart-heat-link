@@ -36,6 +36,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Special option value to route user to manual serial port entry
+MANUAL_PORT_OPTION = "__manual__"
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_SERIAL_PORT): str,
@@ -60,6 +63,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            # If the user chose manual entry, go to a manual port step
+            if user_input.get(CONF_SERIAL_PORT) == MANUAL_PORT_OPTION:
+                return await self.async_step_manual_port()
             try:
                 await self._test_connection(user_input[CONF_SERIAL_PORT])
             except CannotConnectError:
@@ -84,6 +90,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 port["device"]: f"{port['device']} - {port['description']}"
                 for port in self._discovered_ports
             }
+            # Allow manual entry in case the desired port is not listed
+            port_options[MANUAL_PORT_OPTION] = "Other (enter manually)"
             schema = vol.Schema(
                 {
                     vol.Required(CONF_SERIAL_PORT): vol.In(port_options),
@@ -97,6 +105,33 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
             description_placeholders={"port_count": str(len(self._discovered_ports))},
+        )
+
+    async def async_step_manual_port(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manual serial port entry for initial setup."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            try:
+                await self._test_connection(user_input[CONF_SERIAL_PORT])
+            except CannotConnectError:
+                errors["base"] = "cannot_connect"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception (manual port)")
+                errors["base"] = "unknown"
+            else:
+                return self.async_create_entry(
+                    title=f"Bromic Smart Heat Link ({user_input[CONF_SERIAL_PORT]})",
+                    data=user_input,
+                    options={CONF_CONTROLLERS: {}},
+                )
+
+        return self.async_show_form(
+            step_id="manual_port",
+            data_schema=STEP_USER_DATA_SCHEMA,
+            errors=errors,
         )
 
     async def _test_connection(self, port: str) -> None:
@@ -467,6 +502,9 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            # Route to manual entry if chosen
+            if user_input.get(CONF_SERIAL_PORT) == MANUAL_PORT_OPTION:
+                return await self.async_step_change_serial_port_manual()
             # Validate by attempting a quick connection
             new_port = user_input[CONF_SERIAL_PORT]
             hub = BromicHub(self.hass, new_port)
@@ -524,6 +562,8 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 port["device"]: f"{port['device']} - {port['description']}"
                 for port in discovered
             }
+            # Include manual option
+            port_options[MANUAL_PORT_OPTION] = "Other (enter manually)"
             schema = vol.Schema({vol.Required(CONF_SERIAL_PORT): vol.In(port_options)})
         else:
             schema = vol.Schema({vol.Required(CONF_SERIAL_PORT): str})
@@ -531,6 +571,62 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
         return self.async_show_form(
             step_id="change_serial_port",
             data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_change_serial_port_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manual serial port entry when changing the port via options."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            new_port = user_input[CONF_SERIAL_PORT]
+            hub = BromicHub(self.hass, new_port)
+            try:
+                await hub.async_connect()
+                await hub.async_test_connection()
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug("Port validation failed for %s (manual)", new_port)
+                errors["base"] = "cannot_connect"
+            else:
+                await hub.async_disconnect()
+
+                new_options = self.config_entry.options.copy()
+                old_port = new_options.get(
+                    CONF_SERIAL_PORT, self.config_entry.data[CONF_SERIAL_PORT]
+                )
+                new_options[CONF_SERIAL_PORT] = new_port
+
+                try:
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        title=f"Bromic Smart Heat Link ({new_port})",
+                    )
+                except Exception:  # noqa: BLE001
+                    _LOGGER.debug("Failed to update title to %s", new_port)
+
+                try:
+                    if old_port != new_port:
+                        dev_reg = dr.async_get(self.hass)
+                        old_port_id = old_port.replace("/", "_").replace(":", "_")
+                        device = dev_reg.async_get_device(
+                            identifiers={(DOMAIN, old_port_id)}
+                        )
+                        if device:
+                            dev_reg.async_remove_device(device.id)
+                except Exception:  # noqa: BLE001
+                    _LOGGER.debug("Failed to remove old bridge device for %s", old_port)
+
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                )
+
+                return self.async_create_entry(title="", data=new_options)
+
+        return self.async_show_form(
+            step_id="change_serial_port_manual",
+            data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
         )
 
