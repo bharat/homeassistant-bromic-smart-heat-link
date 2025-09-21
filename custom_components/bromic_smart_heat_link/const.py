@@ -68,11 +68,14 @@ DIMMER_BUTTONS: Final = {
 
 # Brightness level mappings (HA 0-255 to Bromic levels)
 BRIGHTNESS_LEVELS: Final = {
-    0: {"button": OFF_BUTTON_CODE, "name": "Off"},  # 0% -> Off button
-    64: {"button": 4, "name": "25%"},  # 1-64 -> Button 4 (25%)
-    128: {"button": 3, "name": "50%"},  # 65-128 -> Button 3 (50%)
-    191: {"button": 2, "name": "75%"},  # 129-191 -> Button 2 (75%)
-    255: {"button": 1, "name": "100%"},  # 192-255 -> Button 1 (100%)
+    0: {
+        "button": OFF_BUTTON_CODE,
+        "name": "off",
+    },  # 0% -> Off button (key used for translations)
+    64: {"button": 4, "name": "25"},  # 1-64 -> Button 4 (25%)
+    128: {"button": 3, "name": "50"},  # 65-128 -> Button 3 (50%)
+    191: {"button": 2, "name": "75"},  # 129-191 -> Button 2 (75%)
+    255: {"button": 1, "name": "100"},  # 192-255 -> Button 1 (100%)
 }
 
 # Learning sequence for dimmer controllers (show Off last)
