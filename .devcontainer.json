@@ -49,7 +49,7 @@
     }
   },
   "remoteEnv": {
-    "GIT_EDITOR": "cursor"
+    "GIT_EDITOR": "cursor --wait"
   },
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
