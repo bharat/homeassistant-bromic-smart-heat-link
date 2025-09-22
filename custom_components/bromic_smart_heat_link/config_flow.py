@@ -177,6 +177,7 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             menu_options=[
                 "change_serial_port",
                 "add_controller",
+                "adopt_controller",
                 "manage_controllers",
                 "advanced_settings",
             ],
@@ -333,6 +334,76 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                     else "ON/OFF"
                 ),
             },
+        )
+
+    async def async_step_adopt_controller(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Adopt an already programmed controller without running learning."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            id_location = user_input[CONF_ID_LOCATION]
+            controller_type = user_input[CONF_CONTROLLER_TYPE]
+
+            controllers = self.config_entry.options.get(CONF_CONTROLLERS, {})
+            if str(id_location) in controllers:
+                errors["base"] = "id_already_used"
+            else:
+                # Assume all buttons for the selected controller type are available
+                if controller_type == CONTROLLER_TYPE_DIMMER:
+                    learned_buttons: dict[int, bool] = dict.fromkeys(
+                        DIMMER_BUTTONS.keys(), True
+                    )
+                else:
+                    learned_buttons = dict.fromkeys(ONOFF_BUTTONS.keys(), True)
+
+                new_controllers = controllers.copy()
+                new_controllers[str(id_location)] = {
+                    CONF_CONTROLLER_TYPE: controller_type,
+                    CONF_LEARNED_BUTTONS: learned_buttons,
+                }
+
+                new_options = self.config_entry.options.copy()
+                new_options[CONF_CONTROLLERS] = new_controllers
+
+                # Reload to create entities immediately
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                )
+
+                return self.async_create_entry(title="", data=new_options)
+
+        # Get used and available IDs
+        controllers = self.config_entry.options.get(CONF_CONTROLLERS, {})
+        used_ids = [int(id_str) for id_str in controllers]
+        available_ids = [
+            i for i in range(MIN_ID_LOCATION, MAX_ID_LOCATION + 1) if i not in used_ids
+        ]
+
+        if not available_ids:
+            return self.async_show_form(
+                step_id="adopt_controller", errors={"base": "no_available_ids"}
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_ID_LOCATION): vol.In(
+                    {id_val: f"ID {id_val}" for id_val in available_ids[:10]}
+                ),
+                vol.Required(CONF_CONTROLLER_TYPE): vol.In(
+                    {
+                        CONTROLLER_TYPE_ONOFF: "ON/OFF Controller (4 buttons)",
+                        CONTROLLER_TYPE_DIMMER: "Dimmer Controller (7 buttons)",
+                    }
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="adopt_controller",
+            data_schema=schema,
+            errors=errors,
         )
 
     async def _learn_button(self, id_location: int, button: int) -> None:
