@@ -28,8 +28,21 @@
         "menu_options": {
           "change_serial_port": "Change Serial Port",
           "add_controller": "Add New Controller",
+          "adopt_controller": "Adopt Existing Controller",
           "manage_controllers": "Manage Controllers",
           "advanced_settings": "Advanced Settings"
+        }
+      },
+      "adopt_controller": {
+        "title": "Adopt Existing Controller",
+        "description": "If your Smart Heat Link is already programmed, you can adopt it without learning. Select an unused ID location and controller type.",
+        "data": {
+          "id_location": "ID Location",
+          "controller_type": "Controller Type"
+        },
+        "data_description": {
+          "id_location": "Choose an unused ID location (1-50) for this controller",
+          "controller_type": "Select the type of controller you are adopting"
         }
       },
       "add_controller": {
