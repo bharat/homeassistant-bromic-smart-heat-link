@@ -47,23 +47,28 @@ A Home Assistant custom integration for controlling Bromic outdoor heaters via t
 
 ### Initial Setup
 
-1. Go to **Settings** → **Devices & Services** → **Add Integration**
-2. Search for "Bromic Smart Heat Link"
-3. Select your USB-to-RS232 serial port from the discovered list
-4. The integration will test the connection and complete setup
+There are a couple of ways setup may go depending on your system:
 
-### Adding Controllers
+1. Go to **Settings** → **Devices & Services** → **Add Integration** and search for "Bromic Smart Heat Link".
+2. Choose one of the following:
+   - If your serial device is listed, select it and continue.
+   - If it is not listed, choose **Other (enter manually)** and type the path (for example `/dev/serial/by-id/...` or `/dev/ttyUSB0`).
+3. The integration will test the connection and complete setup.
+
+Tip: On Linux you may need to ensure the Home Assistant user has permission to access serial devices (e.g., add the user to the `dialout` group, if necessary).
+
+### Adding or Adopting Controllers
 
 After initial setup, you can add controllers through the integration options:
 
 1. Go to **Settings** → **Devices & Services** → **Bromic Smart Heat Link** → **Configure**
-2. Select **"Add New Controller"**
+2. Select **Add New Controller** or **Adopt Existing Controller**
 3. Choose an available ID location (1-50)
 4. Select controller type:
    - **ON/OFF Controller**: 4 buttons (Ch1 ON/OFF, Ch2 ON/OFF)
    - **Dimmer Controller**: 7 buttons (100%, 75%, 50%, 25%, Dim Up, Dim Down, Off)
 
-### Learning Process
+### Learning Process (when adding)
 
 For each controller, you'll go through a guided learning process:
 
@@ -75,15 +80,19 @@ For each controller, you'll go through a guided learning process:
 
 The learning process teaches the Smart Heat Link to recognize commands that Home Assistant will send, without affecting your existing remote functionality.
 
+### Adopting an Existing Controller
+
+If your Smart Heat Link is already programmed, use **Adopt Existing Controller** to assign it to an ID without re-learning. Select an unused ID location and the appropriate controller type; entities will be created immediately.
+
 ## Entities Created
 
+Names no longer include a channel suffix; each controller is identified by its ID.
+
 ### ON/OFF Controllers
-- `switch.bromic_id{X}_channel_1` - Channel 1 switch
-- `switch.bromic_id{X}_channel_2` - Channel 2 switch
+- `switch.bromic_id{X}` - Primary switch for the controller (Ch1 ON/OFF)
 
 ### Dimmer Controllers
-- `light.bromic_id{X}_channel_1` - Channel 1 dimmable light
-- `light.bromic_id{X}_channel_2` - Channel 2 dimmable light
+- `light.bromic_id{X}` - Dimmable light entity
 - `select.bromic_id{X}_power_level` - Power level preset selector
 - `button.bromic_id{X}_dim_up` - Dim up button (if learned)
 - `button.bromic_id{X}_dim_down` - Dim down button (if learned)
@@ -112,7 +121,7 @@ The integration provides several services for advanced users:
 
 ### Connection Issues
 - Verify USB-to-RS232 adapter is connected
-- Check serial port permissions (add HA user to `dialout` group on Linux)
+- Check serial port permissions (add HA user to `dialout` group on Linux, if necessary)
 - Use stable device paths like `/dev/serial/by-id/*` instead of `/dev/ttyUSB0`
 - Refer to the [Bromic Smart Heat Link Installation Guide](docs/Bromic-Smart-Heat-Link-Installation-Guide.pdf)
 
@@ -127,13 +136,7 @@ The integration provides several services for advanced users:
 - Restart Home Assistant after adding/removing controllers
 - Check diagnostics page for detailed information
 
-## Safety Notes
-
-⚠️ **Important Safety Information**:
-- Installation should be performed by a licensed electrician
-- Keep low-voltage wiring separate from mains power
-- Follow local electrical codes and regulations
-- Ensure proper grounding and safety measures
+<!-- Safety notes omitted; SHL usage with this integration does not introduce special safety considerations beyond standard electrical practices. -->
 
 ## Support
 

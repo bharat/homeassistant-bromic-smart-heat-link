@@ -59,8 +59,8 @@ class BromicEntity(Entity):
             f"{DOMAIN}_{port_id}_{id_location}_ch{channel}_{entity_type}"
         )
 
-        # Entity naming
-        self._attr_name = f"Bromic ID{id_location} Ch{channel}"
+        # Entity naming (omit explicit channel nomenclature)
+        self._attr_name = f"Bromic ID{id_location}"
 
         # Device info
         self._attr_device_info = DeviceInfo(

@@ -29,8 +29,7 @@
           "change_serial_port": "Change Serial Port",
           "add_controller": "Add New Controller",
           "adopt_controller": "Adopt Existing Controller",
-          "manage_controllers": "Manage Controllers",
-          "advanced_settings": "Advanced Settings"
+          "manage_controllers": "Manage Controllers"
         }
       },
       "adopt_controller": {

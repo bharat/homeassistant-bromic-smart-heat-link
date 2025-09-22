@@ -179,7 +179,6 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 "add_controller",
                 "adopt_controller",
                 "manage_controllers",
-                "advanced_settings",
             ],
         )
 
@@ -554,17 +553,7 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
             data_schema=schema,
         )
 
-    async def async_step_advanced_settings(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Configure advanced settings."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        return self.async_show_form(
-            step_id="advanced_settings",
-            data_schema=vol.Schema({}),  # Add advanced settings here if needed
-        )
+    # Advanced settings removed (no options currently)
 
     async def async_step_change_serial_port(
         self, user_input: dict[str, Any] | None = None
