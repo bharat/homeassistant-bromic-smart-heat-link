@@ -70,10 +70,6 @@
           "controller_id": "Controller",
           "action": "Action"
         }
-      },
-      "advanced_settings": {
-        "title": "Advanced Settings",
-        "description": "Configure advanced options for the integration."
       }
     },
     "error": {
