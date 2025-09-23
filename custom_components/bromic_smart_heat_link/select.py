@@ -108,7 +108,7 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
         self._button_mapping = button_mapping
 
         # Select-specific attributes
-        self._attr_name = f"Bromic ID{id_location} Power Level"
+        self._attr_name = "Power Level"
         self._attr_options = available_levels
         self._attr_current_option = available_levels[0] if available_levels else None
 

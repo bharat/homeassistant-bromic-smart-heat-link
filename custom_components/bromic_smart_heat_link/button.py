@@ -105,7 +105,7 @@ class BromicButton(BromicEntity, ButtonEntity):
         self._button_name = button_name
 
         # Button-specific attributes
-        self._attr_name = f"Bromic ID{id_location} {button_name}"
+        self._attr_name = button_name
 
         # Update unique ID to include button code
         port_id = self._hub.port.replace("/", "_").replace(":", "_")

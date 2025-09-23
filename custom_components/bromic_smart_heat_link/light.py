@@ -119,6 +119,8 @@ class BromicLight(BromicEntity, LightEntity):
         self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
         # Name already set by base class (no channel nomenclature)
+        # Keep entity name None so object_id derives from device name
+        self._attr_name = None
 
         # Determine available brightness levels based on learned buttons
         self._available_levels = {}

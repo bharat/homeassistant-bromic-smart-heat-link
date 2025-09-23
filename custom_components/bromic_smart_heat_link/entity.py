@@ -54,13 +54,19 @@ class BromicEntity(Entity):
         port_id = self._hub.port.replace("/", "_").replace(":", "_")
         self._attr_unique_id = f"{DOMAIN}_{port_id}_{id_location}_{entity_type}"
 
-        # Entity naming
-        self._attr_name = f"Bromic ID{id_location}"
+        # Use device name + short entity name for IDs
+        self._attr_has_entity_name = True
+
+        # Device and default names
+        device_name = f"Bromic ID{id_location}"
+        # When has_entity_name is True, leaving entity name as None makes the
+        # primary entity's object_id derive solely from the device name.
+        self._attr_name = None
 
         # Device info
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{port_id}_{id_location}")},
-            name=f"Bromic Controller ID{id_location}",
+            name=device_name,
             manufacturer=MANUFACTURER,
             model=f"{MODEL} ({controller_type.upper()})",
             sw_version=SW_VERSION,
