@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Final
 
 DOMAIN: Final = "bromic_smart_heat_link"
@@ -48,12 +49,10 @@ OFF_BUTTON_CODE: Final = 8
 MIN_STD_RESPONSE_LENGTH: Final = 3
 MIN_FRAME_LENGTH: Final = 6
 
-# Button mappings for different controller types
+# Button mappings for different controller types (simplified - no channels)
 ONOFF_BUTTONS: Final = {
-    1: {"name": "Ch1 ON", "function": "turn_on_ch1"},
-    2: {"name": "Ch1 OFF", "function": "turn_off_ch1"},
-    3: {"name": "Ch2 ON", "function": "turn_on_ch2"},
-    4: {"name": "Ch2 OFF", "function": "turn_off_ch2"},
+    1: {"name": "ON", "function": "turn_on"},
+    2: {"name": "OFF", "function": "turn_off"},
 }
 
 DIMMER_BUTTONS: Final = {
@@ -66,16 +65,13 @@ DIMMER_BUTTONS: Final = {
     8: {"name": "Off", "function": "turn_off"},
 }
 
-# Brightness level mappings (HA 0-255 to Bromic levels)
+# Brightness level mappings (HA 0-255 to Bromic levels); names map to translation keys
 BRIGHTNESS_LEVELS: Final = {
-    0: {
-        "button": OFF_BUTTON_CODE,
-        "name": "off",
-    },  # 0% -> Off button (key used for translations)
-    64: {"button": 4, "name": "25"},  # 1-64 -> Button 4 (25%)
-    128: {"button": 3, "name": "50"},  # 65-128 -> Button 3 (50%)
-    191: {"button": 2, "name": "75"},  # 129-191 -> Button 2 (75%)
-    255: {"button": 1, "name": "100"},  # 192-255 -> Button 1 (100%)
+    0: {"button": OFF_BUTTON_CODE, "name": "off"},
+    64: {"button": 4, "name": "25"},
+    128: {"button": 3, "name": "50"},
+    191: {"button": 2, "name": "75"},
+    255: {"button": 1, "name": "100"},
 }
 
 # Learning sequence for dimmer controllers (show Off last)
@@ -106,10 +102,6 @@ MANUFACTURER: Final = "Bromic"
 MODEL: Final = "Smart Heat Link"
 SW_VERSION: Final = "Bridge"
 
-# Entity naming
-ENTITY_ID_FORMAT: Final = "{domain}.{name}"
-UNIQUE_ID_FORMAT: Final = "{domain}_{port_id}_{id_location}_ch{channel}"
-
 # Dispatcher signal format for syncing UI state across entities
 SIGNAL_LEVEL_FMT: Final = f"{DOMAIN}_level_{{port_id}}_{{id_location}}"
 
@@ -126,9 +118,17 @@ SERVICE_SEND_RAW_COMMAND: Final = "send_raw_command"
 ATTR_ID_LOCATION: Final = "id_location"
 ATTR_BUTTON_NUMBER: Final = "button_number"
 ATTR_CONTROLLER_TYPE: Final = "controller_type"
-ATTR_CHANNEL: Final = "channel"
 ATTR_BRIGHTNESS_LEVEL: Final = "brightness_level"
 ATTR_RAW_COMMAND: Final = "raw_command"
 ATTR_LAST_COMMAND_TIME: Final = "last_command_time"
 ATTR_COMMAND_COUNT: Final = "command_count"
 ATTR_ERROR_COUNT: Final = "error_count"
+
+
+# Helpers
+def normalize_controller_data(controller_info: dict) -> dict:
+    """Normalize controller data loaded from storage (convert keys to ints)."""
+    learned = controller_info.get(CONF_LEARNED_BUTTONS, {})
+    with suppress(Exception):
+        learned = {int(k): v for k, v in learned.items()}
+    return {**controller_info, CONF_LEARNED_BUTTONS: learned}

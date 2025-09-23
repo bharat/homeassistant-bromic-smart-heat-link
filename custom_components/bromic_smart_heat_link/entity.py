@@ -32,7 +32,6 @@ class BromicEntity(Entity):
         self,
         hub: BromicHub,
         id_location: int,
-        channel: int,
         controller_type: str,
         entity_type: str,
     ) -> None:
@@ -42,24 +41,20 @@ class BromicEntity(Entity):
         Args:
             hub: The Bromic hub
             id_location: ID location (1-50)
-            channel: Channel number (1-2)
             controller_type: Controller type (onoff/dimmer)
             entity_type: Entity type for naming
 
         """
         self._hub = hub
         self._id_location = id_location
-        self._channel = channel
         self._controller_type = controller_type
         self._entity_type = entity_type
 
-        # Generate unique identifiers
+        # Generate unique identifiers (no channel concept)
         port_id = self._hub.port.replace("/", "_").replace(":", "_")
-        self._attr_unique_id = (
-            f"{DOMAIN}_{port_id}_{id_location}_ch{channel}_{entity_type}"
-        )
+        self._attr_unique_id = f"{DOMAIN}_{port_id}_{id_location}_{entity_type}"
 
-        # Entity naming (omit explicit channel nomenclature)
+        # Entity naming
         self._attr_name = f"Bromic ID{id_location}"
 
         # Device info

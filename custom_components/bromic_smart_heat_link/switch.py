@@ -49,38 +49,29 @@ async def async_setup_entry(
         with suppress(Exception):
             learned_buttons = {int(k): v for k, v in learned_buttons.items()}
 
-        # Only create switch entities for ON/OFF controllers
+        # Only create a single aggregate switch for ON/OFF controllers
         if controller_type == CONTROLLER_TYPE_ONOFF:
-            # Create switch entities for each channel
-            for channel in [1, 2]:
-                # Check if the required buttons for this channel are learned
-                if channel == 1:
-                    on_button, off_button = 1, 2
-                else:
-                    on_button, off_button = 3, 4
-
-                if learned_buttons.get(on_button) and learned_buttons.get(off_button):
-                    entities.append(
-                        BromicSwitch(
-                            hub=hub,
-                            id_location=id_location,
-                            channel=channel,
-                            controller_type=controller_type,
-                            on_button=on_button,
-                            off_button=off_button,
-                        )
+            on_button, off_button = 1, 2
+            if learned_buttons.get(on_button) and learned_buttons.get(off_button):
+                entities.append(
+                    BromicSwitch(
+                        hub=hub,
+                        id_location=id_location,
+                        controller_type=controller_type,
+                        on_button=on_button,
+                        off_button=off_button,
                     )
-                else:
-                    _LOGGER.warning(
-                        (
-                            "Skipping switch ID%d Ch%d - required buttons not learned "
-                            "(ON=%d, OFF=%d)"
-                        ),
-                        id_location,
-                        channel,
-                        on_button,
-                        off_button,
-                    )
+                )
+            else:
+                _LOGGER.warning(
+                    (
+                        "Skipping switch ID%d - required buttons not learned "
+                        "(ON=%d, OFF=%d)"
+                    ),
+                    id_location,
+                    on_button,
+                    off_button,
+                )
 
     if entities:
         async_add_entities(entities)
@@ -89,11 +80,10 @@ async def async_setup_entry(
 class BromicSwitch(BromicEntity, SwitchEntity):
     """Representation of a Bromic ON/OFF controller switch."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         hub: BromicHub,
         id_location: int,
-        channel: int,
         controller_type: str,
         on_button: int,
         off_button: int,
@@ -104,13 +94,12 @@ class BromicSwitch(BromicEntity, SwitchEntity):
         Args:
             hub: The Bromic hub
             id_location: ID location (1-50)
-            channel: Channel number (1-2)
             controller_type: Controller type
             on_button: Button code for turning ON
             off_button: Button code for turning OFF
 
         """
-        super().__init__(hub, id_location, channel, controller_type, "switch")
+        super().__init__(hub, id_location, controller_type, "switch")
 
         self._on_button = on_button
         self._off_button = off_button
@@ -119,8 +108,7 @@ class BromicSwitch(BromicEntity, SwitchEntity):
         self._attr_is_on = False
         self._attr_assumed_state = True  # We don't get feedback from the device
 
-        # Name without channel nomenclature
-        self._attr_name = f"Bromic ID{id_location}"
+        # Name already set by base class (no channel)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -128,7 +116,6 @@ class BromicSwitch(BromicEntity, SwitchEntity):
         attrs = super().extra_state_attributes
         attrs.update(
             {
-                "channel": self._channel,
                 "on_button": self._on_button,
                 "off_button": self._off_button,
                 "button_names": {

@@ -37,7 +37,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Bromic select entities from a config entry."""
+    """Set up power-level select entities for dimmer controllers."""
     hub_data = hass.data[DOMAIN][config_entry.entry_id]
     hub: BromicHub = hub_data["hub"]
 
@@ -102,7 +102,7 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
             button_mapping: Mapping of level names to button codes
 
         """
-        super().__init__(hub, id_location, 0, controller_type, "select")
+        super().__init__(hub, id_location, controller_type, "select")
 
         self._available_levels = available_levels
         self._button_mapping = button_mapping

@@ -70,10 +70,6 @@
           "controller_id": "Controller",
           "action": "Action"
         }
-      },
-      "advanced_settings": {
-        "title": "Advanced Settings",
-        "description": "Configure advanced options for the integration."
       }
     },
     "error": {
@@ -113,20 +109,6 @@
           "100": "100%"
         }
       }
-    }
-  },
-  "services": {
-    "learn_button": {
-      "name": "Learn Button",
-      "description": "Learn a specific button command for a controller."
-    },
-    "clear_controller": {
-      "name": "Clear Controller",
-      "description": "Clear all learned commands for a controller."
-    },
-    "send_raw_command": {
-      "name": "Send Raw Command",
-      "description": "Send a raw hex command to the device."
     }
   }
 }

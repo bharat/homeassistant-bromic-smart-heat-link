@@ -99,7 +99,7 @@ class BromicButton(BromicEntity, ButtonEntity):
             button_name: Human-readable button name
 
         """
-        super().__init__(hub, id_location, 0, controller_type, "button")
+        super().__init__(hub, id_location, controller_type, "button")
 
         self._button_code = button_code
         self._button_name = button_name

@@ -68,7 +68,6 @@ async def async_setup_entry(
                     BromicLight(
                         hub=hub,
                         id_location=id_location,
-                        channel=1,  # abstracted
                         controller_type=controller_type,
                         learned_buttons=learned_buttons,
                     )
@@ -95,7 +94,6 @@ class BromicLight(BromicEntity, LightEntity):
         self,
         hub: BromicHub,
         id_location: int,
-        channel: int,
         controller_type: str,
         learned_buttons: dict[int, bool],
     ) -> None:
@@ -105,12 +103,11 @@ class BromicLight(BromicEntity, LightEntity):
         Args:
             hub: The Bromic hub
             id_location: ID location (1-50)
-            channel: Channel number (1-2)
             controller_type: Controller type
             learned_buttons: Dictionary of learned buttons
 
         """
-        super().__init__(hub, id_location, channel, controller_type, "light")
+        super().__init__(hub, id_location, controller_type, "light")
 
         self._learned_buttons = learned_buttons
 
@@ -121,8 +118,7 @@ class BromicLight(BromicEntity, LightEntity):
         self._attr_color_mode = ColorMode.BRIGHTNESS
         self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-        # Name without channel nomenclature
-        self._attr_name = f"Bromic ID{id_location}"
+        # Name already set by base class (no channel nomenclature)
 
         # Determine available brightness levels based on learned buttons
         self._available_levels = {}
@@ -176,7 +172,6 @@ class BromicLight(BromicEntity, LightEntity):
         attrs = super().extra_state_attributes
         attrs.update(
             {
-                "channel": self._channel,
                 "available_levels": {
                     str(brightness): info["name"]
                     for brightness, info in self._available_levels.items()
