@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -44,6 +45,9 @@ async def async_setup_entry(
         id_location = int(id_str)
         controller_type = controller_info[CONF_CONTROLLER_TYPE]
         learned_buttons = controller_info.get(CONF_LEARNED_BUTTONS, {})
+        # Normalize keys from storage (JSON) which may be strings
+        with suppress(Exception):
+            learned_buttons = {int(k): v for k, v in learned_buttons.items()}
 
         # Only create switch entities for ON/OFF controllers
         if controller_type == CONTROLLER_TYPE_ONOFF:
