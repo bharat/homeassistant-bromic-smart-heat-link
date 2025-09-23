@@ -1,5 +1,14 @@
 {
     "name": "Bromic Smart Heat Link",
-    "homeassistant": "2025.2.4",
-    "hacs": "2.0.5"
+    "homeassistant": "2024.4.0",
+    "hacs": "2.0.5",
+    "render_readme": true,
+    "country": [
+        "US",
+        "AU",
+        "NZ",
+        "CA",
+        "GB"
+    ],
+    "content_in_root": false
 }

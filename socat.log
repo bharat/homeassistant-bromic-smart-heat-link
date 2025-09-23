@@ -1,0 +1,35 @@
+2025/09/19 10:09:25 socat[35351] N listening on LEN=16 AF=2 0.0.0.0:7777
+2025/09/19 10:10:38 socat[35351] N accepting connection from LEN=16 AF=2 127.0.0.1:64375 on LEN=16 AF=2 127.0.0.1:7777
+2025/09/19 10:10:38 socat[35351] N forked off child process 35369
+2025/09/19 10:10:38 socat[35351] N listening on LEN=16 AF=2 0.0.0.0:7777
+2025/09/19 10:10:38 socat[35369] N opening character device "/dev/ttys021" for reading and writing
+2025/09/19 10:10:38 socat[35369] N starting data transfer loop with FDs [7,7] and [6,6]
+2025/09/19 10:12:10 socat[35369] N socket 1 (fd 7) is at EOF
+2025/09/19 10:12:11 socat[35369] N exiting with status 0
+2025/09/19 10:12:11 socat[35351] N childdied(): handling signal 20
+2025/09/19 10:12:11 socat[35351] N accepting connection from LEN=16 AF=2 127.0.0.1:64683 on LEN=16 AF=2 127.0.0.1:7777
+2025/09/19 10:12:11 socat[35351] N forked off child process 35450
+2025/09/19 10:12:11 socat[35351] N listening on LEN=16 AF=2 0.0.0.0:7777
+2025/09/19 10:12:11 socat[35450] N opening character device "/dev/ttys021" for reading and writing
+2025/09/19 10:12:11 socat[35450] N starting data transfer loop with FDs [7,7] and [6,6]
+2025/09/19 12:08:47 socat[35450] N socket 1 (fd 7) is at EOF
+2025/09/19 12:08:47 socat[35450] N exiting with status 0
+2025/09/19 12:08:47 socat[35351] N childdied(): handling signal 20
+2025/09/19 14:58:59 socat[35351] N socat_signal(): handling signal 2
+2025/09/19 14:58:59 socat[35351] N exiting on signal 2
+2025/09/19 14:58:59 socat[35351] N socat_signal(): finishing signal 2
+2025/09/19 14:58:59 socat[35351] N exit(130)
+2025/09/19 14:59:53 socat[46694] N listening on LEN=16 AF=2 0.0.0.0:7777
+2025/09/19 15:00:20 socat[46694] N accepting connection from LEN=16 AF=2 127.0.0.1:52098 on LEN=16 AF=2 127.0.0.1:7777
+2025/09/19 15:00:20 socat[46694] N forked off child process 46697
+2025/09/19 15:00:20 socat[46694] N listening on LEN=16 AF=2 0.0.0.0:7777
+2025/09/19 15:00:20 socat[46697] N opening character device "/dev/ttys021" for reading and writing
+2025/09/19 15:00:20 socat[46697] N starting data transfer loop with FDs [7,7] and [6,6]
+2025/09/19 17:12:20 socat[46694] N socat_signal(): handling signal 15
+2025/09/19 17:12:20 socat[46697] N socat_signal(): handling signal 15
+2025/09/19 17:12:20 socat[46694] W exiting on signal 15
+2025/09/19 17:12:20 socat[46694] N socat_signal(): finishing signal 15
+2025/09/19 17:12:20 socat[46694] N exit(143)
+2025/09/19 17:12:20 socat[46697] W exiting on signal 15
+2025/09/19 17:12:20 socat[46697] N socat_signal(): finishing signal 15
+2025/09/19 17:12:20 socat[46697] N exit(143)

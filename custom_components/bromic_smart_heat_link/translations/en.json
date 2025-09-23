@@ -23,12 +23,25 @@
   "options": {
     "step": {
       "init": {
-        "title": "Bromic Smart Heat Link Options",
+        "title": "Bromic Smart Heat Link",
         "description": "Manage your Bromic controllers and settings.",
         "menu_options": {
+          "change_serial_port": "Change Serial Port",
           "add_controller": "Add New Controller",
-          "manage_controllers": "Manage Controllers", 
-          "advanced_settings": "Advanced Settings"
+          "adopt_controller": "Adopt Existing Controller",
+          "manage_controllers": "Manage Controllers"
+        }
+      },
+      "adopt_controller": {
+        "title": "Adopt Existing Controller",
+        "description": "If your Smart Heat Link is already programmed, you can adopt it without learning. Select an unused ID location and controller type.",
+        "data": {
+          "id_location": "ID Location",
+          "controller_type": "Controller Type"
+        },
+        "data_description": {
+          "id_location": "Choose an unused ID location (1-50) for this controller",
+          "controller_type": "Select the type of controller you are adopting"
         }
       },
       "add_controller": {
@@ -45,10 +58,9 @@
       },
       "learn_buttons": {
         "title": "Learn Controller Buttons",
-        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Step {button_number} of {total_buttons}: Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control\n2. Wait for the controller to beep (within 5 seconds)\n3. Click **Learn Button** below immediately after the beep\n4. Wait for confirmation, then proceed to the next button\n\nIf you don't need this button, you can skip it.",
+        "description": "Learn the button commands for your {controller_type} controller at ID location {id_location}.\n\n**Learn {button_name}**\n\nProgress: {learned_count}/{total_buttons} buttons learned\n\n**Instructions:**\n1. Press and hold the **P3 button** on your existing remote control (you will hear a continuous tone).\n2. Click **Send Learn Command** as the tone begins.\n3. When you hear the confirmation tones (you may hear multiple beeps), click **I heard the confirmation tones** to advance.\n4. If you didn't hear them, click **I didn't hear it - retry** to resend without advancing.\n\nIf you don't need this button, choose **Skip**.",
         "data": {
-          "learn_button": "Learn Button",
-          "skip_button": "Skip This Button"
+          "action": "Action"
         }
       },
       "manage_controllers": {
@@ -58,10 +70,6 @@
           "controller_id": "Controller",
           "action": "Action"
         }
-      },
-      "advanced_settings": {
-        "title": "Advanced Settings",
-        "description": "Configure advanced options for the integration."
       }
     },
     "error": {

@@ -1,4 +1,4 @@
-name: Validate
+name: Hassfest/HACS
 
 on:
   workflow_dispatch:
@@ -32,5 +32,5 @@ jobs:
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
           category: integration
-          # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
+          # Skip central brands repo check while assets are pending in HA brands
           ignore: brands

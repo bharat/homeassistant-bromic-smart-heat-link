@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -15,6 +17,7 @@ from .const import (
     CONTROLLER_TYPE_DIMMER,
     DIMMER_BUTTONS,
     DOMAIN,
+    SIGNAL_LEVEL_FMT,
 )
 from .entity import BromicEntity
 
@@ -45,6 +48,9 @@ async def async_setup_entry(
         id_location = int(id_str)
         controller_type = controller_info[CONF_CONTROLLER_TYPE]
         learned_buttons = controller_info.get(CONF_LEARNED_BUTTONS, {})
+        # Normalize keys from storage (JSON) which may be strings
+        with suppress(Exception):
+            learned_buttons = {int(k): v for k, v in learned_buttons.items()}
 
         # Only create select entities for dimmer controllers
         if controller_type == CONTROLLER_TYPE_DIMMER:
@@ -147,4 +153,10 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
         success = await self.async_send_command(button_code)
         if success:
             self._attr_current_option = option
+            # Broadcast new level to peer entities for state sync
+            port_id = self._hub.port.replace("/", "_").replace(":", "_")
+            signal = SIGNAL_LEVEL_FMT.format(
+                port_id=port_id, id_location=self._id_location
+            )
+            async_dispatcher_send(self.hass, signal, option)
             self.async_write_ha_state()

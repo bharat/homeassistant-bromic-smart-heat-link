@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ColorMode,
-    LightEntity,
-)
+from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -19,6 +17,8 @@ from .const import (
     CONTROLLER_TYPE_DIMMER,
     DIMMER_BUTTONS,
     DOMAIN,
+    OFF_BUTTON_CODE,
+    SIGNAL_LEVEL_FMT,
 )
 from .entity import BromicEntity
 
@@ -49,40 +49,40 @@ async def async_setup_entry(
         id_location = int(id_str)
         controller_type = controller_info[CONF_CONTROLLER_TYPE]
         learned_buttons = controller_info.get(CONF_LEARNED_BUTTONS, {})
+        # Normalize keys from storage (JSON) which may be strings
+        with suppress(Exception):
+            learned_buttons = {int(k): v for k, v in learned_buttons.items()}
 
-        # Only create light entities for dimmer controllers
+        # Only create a single aggregate light for dimmer controllers
+        # (abstract channels)
         if controller_type == CONTROLLER_TYPE_DIMMER:
-            # Create light entities for each channel
-            for channel in [1, 2]:
-                # Check if essential buttons are learned (OFF and one brightness level)
-                brightness_buttons = [1, 2, 3, 4]  # 100%, 75%, 50%, 25%
+            brightness_buttons = [1, 2, 3, 4]
+            # Require explicitly learned Off button per configuration
+            has_off = learned_buttons.get(OFF_BUTTON_CODE, False)
+            has_brightness = any(
+                learned_buttons.get(btn, False) for btn in brightness_buttons
+            )
 
-                has_off = learned_buttons.get(7, False)
-                has_brightness = any(
-                    learned_buttons.get(btn, False) for btn in brightness_buttons
+            if has_off and has_brightness:
+                entities.append(
+                    BromicLight(
+                        hub=hub,
+                        id_location=id_location,
+                        channel=1,  # abstracted
+                        controller_type=controller_type,
+                        learned_buttons=learned_buttons,
+                    )
                 )
-
-                if has_off and has_brightness:
-                    entities.append(
-                        BromicLight(
-                            hub=hub,
-                            id_location=id_location,
-                            channel=channel,
-                            controller_type=controller_type,
-                            learned_buttons=learned_buttons,
-                        )
-                    )
-                else:
-                    _LOGGER.warning(
-                        (
-                            "Skipping light ID%d Ch%d - off/brightness not learned "
-                            "(OFF=%s, Brightness=%s)"
-                        ),
-                        id_location,
-                        channel,
-                        has_off,
-                        has_brightness,
-                    )
+            else:
+                _LOGGER.warning(
+                    (
+                        "Skipping light ID%d - off/brightness not learned "
+                        "(OFF=%s, Brightness=%s)"
+                    ),
+                    id_location,
+                    has_off,
+                    has_brightness,
+                )
 
     if entities:
         async_add_entities(entities)
@@ -121,8 +121,8 @@ class BromicLight(BromicEntity, LightEntity):
         self._attr_color_mode = ColorMode.BRIGHTNESS
         self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-        # Update name with channel info
-        self._attr_name = f"Bromic ID{id_location} Channel {channel}"
+        # Name without channel nomenclature
+        self._attr_name = f"Bromic ID{id_location}"
 
         # Determine available brightness levels based on learned buttons
         self._available_levels = {}
@@ -130,6 +130,45 @@ class BromicLight(BromicEntity, LightEntity):
             button = level_info["button"]
             if self._learned_buttons.get(button, False):
                 self._available_levels[brightness] = level_info
+
+        # Prepare dispatcher signal for syncing with power level select
+        self._level_signal = SIGNAL_LEVEL_FMT.format(
+            port_id=self._hub.port.replace("/", "_").replace(":", "_"),
+            id_location=id_location,
+        )
+        self._level_unsub = None
+
+    def _on_level_change(self, option: str) -> None:
+        """Handle power level select changes to sync on/off state."""
+        if option == "Off":
+            self._attr_is_on = False
+            self._attr_brightness = 0
+        else:
+            # Set a representative brightness when level selected
+            name_to_brightness = {
+                info["name"]: b for b, info in BRIGHTNESS_LEVELS.items()
+            }
+            self._attr_brightness = name_to_brightness.get(option, 255)
+            self._attr_is_on = self._attr_brightness > 0
+        # Thread-safe state update (dispatcher may call from executor thread)
+        self.schedule_update_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Connect dispatcher once hass is available."""
+        await super().async_added_to_hass()
+        if self.hass and self._level_unsub is None:
+            self._level_unsub = async_dispatcher_connect(
+                self.hass, self._level_signal, self._on_level_change
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Disconnect dispatcher on removal."""
+        await super().async_will_remove_from_hass()
+        if self._level_unsub is not None:
+            try:
+                self._level_unsub()
+            finally:
+                self._level_unsub = None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
