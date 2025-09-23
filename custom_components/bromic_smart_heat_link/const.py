@@ -67,7 +67,7 @@ DIMMER_BUTTONS: Final = {
 
 # Brightness level mappings (HA 0-255 to Bromic levels); names map to translation keys
 BRIGHTNESS_LEVELS: Final = {
-    0: {"button": OFF_BUTTON_CODE, "name": "off"},
+    0: {"button": OFF_BUTTON_CODE, "name": "Off"},
     64: {"button": 4, "name": "25"},
     128: {"button": 3, "name": "50"},
     191: {"button": 2, "name": "75"},
@@ -104,6 +104,7 @@ SW_VERSION: Final = "Bridge"
 
 # Dispatcher signal format for syncing UI state across entities
 SIGNAL_LEVEL_FMT: Final = f"{DOMAIN}_level_{{port_id}}_{{id_location}}"
+SIGNAL_LIGHT_FMT: Final = f"{DOMAIN}_light_{{port_id}}_{{id_location}}"
 
 # Default configuration
 DEFAULT_NAME: Final = "Bromic Smart Heat Link"

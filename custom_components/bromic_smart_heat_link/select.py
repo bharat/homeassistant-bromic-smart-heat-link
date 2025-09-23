@@ -7,7 +7,10 @@ from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -18,6 +21,7 @@ from .const import (
     DIMMER_BUTTONS,
     DOMAIN,
     SIGNAL_LEVEL_FMT,
+    SIGNAL_LIGHT_FMT,
 )
 from .entity import BromicEntity
 
@@ -116,6 +120,12 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
         port_id = self._hub.port.replace("/", "_").replace(":", "_")
         self._attr_unique_id = f"{DOMAIN}_{port_id}_{id_location}_power_level"
 
+        # Prepare dispatcher signal for syncing with light entity
+        self._light_signal = SIGNAL_LEVEL_FMT.format(
+            port_id=port_id, id_location=id_location
+        )
+        self._light_unsub = None
+
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return select specific state attributes."""
@@ -133,6 +143,30 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
             }
         )
         return attrs
+
+    def _on_light_state_change(self, level_name: str) -> None:
+        """Handle light state changes to sync power level."""
+        if level_name in self._available_levels:
+            self._attr_current_option = level_name
+            # Thread-safe state update (dispatcher may call from executor thread)
+            self.schedule_update_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Connect dispatcher once hass is available."""
+        await super().async_added_to_hass()
+        if self.hass and self._light_unsub is None:
+            self._light_unsub = async_dispatcher_connect(
+                self.hass, self._light_signal, self._on_light_state_change
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Disconnect dispatcher on removal."""
+        await super().async_will_remove_from_hass()
+        if self._light_unsub is not None:
+            try:
+                self._light_unsub()
+            finally:
+                self._light_unsub = None
 
     async def async_select_option(self, option: str) -> None:
         """Select a power level option."""
@@ -155,8 +189,12 @@ class BromicPowerLevelSelect(BromicEntity, SelectEntity):
             self._attr_current_option = option
             # Broadcast new level to peer entities for state sync
             port_id = self._hub.port.replace("/", "_").replace(":", "_")
-            signal = SIGNAL_LEVEL_FMT.format(
+            level_signal = SIGNAL_LEVEL_FMT.format(
                 port_id=port_id, id_location=self._id_location
             )
-            async_dispatcher_send(self.hass, signal, option)
+            light_signal = SIGNAL_LIGHT_FMT.format(
+                port_id=port_id, id_location=self._id_location
+            )
+            async_dispatcher_send(self.hass, level_signal, option)
+            async_dispatcher_send(self.hass, light_signal, option)
             self.async_write_ha_state()

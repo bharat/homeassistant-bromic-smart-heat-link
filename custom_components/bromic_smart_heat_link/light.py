@@ -7,7 +7,10 @@ from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -19,6 +22,7 @@ from .const import (
     DOMAIN,
     OFF_BUTTON_CODE,
     SIGNAL_LEVEL_FMT,
+    SIGNAL_LIGHT_FMT,
 )
 from .entity import BromicEntity
 
@@ -134,7 +138,12 @@ class BromicLight(BromicEntity, LightEntity):
             port_id=self._hub.port.replace("/", "_").replace(":", "_"),
             id_location=id_location,
         )
+        self._light_signal = SIGNAL_LIGHT_FMT.format(
+            port_id=self._hub.port.replace("/", "_").replace(":", "_"),
+            id_location=id_location,
+        )
         self._level_unsub = None
+        self._light_unsub = None
 
     def _on_level_change(self, option: str) -> None:
         """Handle power level select changes to sync on/off state."""
@@ -151,12 +160,32 @@ class BromicLight(BromicEntity, LightEntity):
         # Thread-safe state update (dispatcher may call from executor thread)
         self.schedule_update_ha_state()
 
+    def _send_level_signal(self) -> None:
+        """Send signal to power level select to sync state."""
+        if self.hass:
+            # Determine current power level based on brightness
+            if self._attr_brightness == 0:
+                level_name = "Off"
+            else:
+                # Find the closest brightness level name
+                brightness_to_name = {
+                    brightness: info["name"]
+                    for brightness, info in BRIGHTNESS_LEVELS.items()
+                }
+                level_name = brightness_to_name.get(self._attr_brightness, "100")
+
+            async_dispatcher_send(self.hass, self._level_signal, level_name)
+
     async def async_added_to_hass(self) -> None:
         """Connect dispatcher once hass is available."""
         await super().async_added_to_hass()
         if self.hass and self._level_unsub is None:
             self._level_unsub = async_dispatcher_connect(
                 self.hass, self._level_signal, self._on_level_change
+            )
+        if self.hass and self._light_unsub is None:
+            self._light_unsub = async_dispatcher_connect(
+                self.hass, self._light_signal, self._on_level_change
             )
 
     async def async_will_remove_from_hass(self) -> None:
@@ -167,6 +196,11 @@ class BromicLight(BromicEntity, LightEntity):
                 self._level_unsub()
             finally:
                 self._level_unsub = None
+        if self._light_unsub is not None:
+            try:
+                self._light_unsub()
+            finally:
+                self._light_unsub = None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -207,6 +241,8 @@ class BromicLight(BromicEntity, LightEntity):
         if success:
             self._attr_is_on = True
             self._attr_brightness = target_brightness
+            # Send signal to power level select to sync state
+            self._send_level_signal()
             self.async_write_ha_state()
 
     async def async_turn_off(self, **_kwargs: Any) -> None:
@@ -220,6 +256,8 @@ class BromicLight(BromicEntity, LightEntity):
             if success:
                 self._attr_is_on = False
                 self._attr_brightness = 0
+                # Send signal to power level select to sync state
+                self._send_level_signal()
                 self.async_write_ha_state()
         else:
             _LOGGER.warning(
