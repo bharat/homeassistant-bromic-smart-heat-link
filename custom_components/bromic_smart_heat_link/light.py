@@ -7,10 +7,6 @@ from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.helpers.dispatcher import (
-    async_dispatcher_connect,
-    async_dispatcher_send,
-)
 
 from .const import (
     BRIGHTNESS_LEVELS,
@@ -21,8 +17,6 @@ from .const import (
     DIMMER_BUTTONS,
     DOMAIN,
     OFF_BUTTON_CODE,
-    SIGNAL_LEVEL_FMT,
-    SIGNAL_LIGHT_FMT,
 )
 from .entity import BromicEntity
 
@@ -35,6 +29,18 @@ if TYPE_CHECKING:
 
 
 _LOGGER = logging.getLogger(__name__)
+
+# Discrete brightness levels for the dimmer (0-255 mapped to power levels)
+DISCRETE_BRIGHTNESS_LEVELS = {
+    0: "Off",  # Off
+    64: "25",  # 25%
+    128: "50",  # 50%
+    191: "75",  # 75%
+    255: "100",  # 100%
+}
+
+# Reverse mapping for power level names to brightness
+POWER_LEVEL_TO_BRIGHTNESS = {v: k for k, v in DISCRETE_BRIGHTNESS_LEVELS.items()}
 
 
 async def async_setup_entry(
@@ -57,17 +63,15 @@ async def async_setup_entry(
         with suppress(Exception):
             learned_buttons = {int(k): v for k, v in learned_buttons.items()}
 
-        # Only create a single aggregate light for dimmer controllers
-        # (abstract channels)
+        # Only create a single light for dimmer controllers
         if controller_type == CONTROLLER_TYPE_DIMMER:
-            brightness_buttons = [1, 2, 3, 4]
-            # Require explicitly learned Off button per configuration
-            has_off = learned_buttons.get(OFF_BUTTON_CODE, False)
-            has_brightness = any(
-                learned_buttons.get(btn, False) for btn in brightness_buttons
+            # Check if we have the required buttons learned
+            required_buttons = [1, 2, 3, 4, OFF_BUTTON_CODE]  # 100%, 75%, 50%, 25%, Off
+            has_required_buttons = all(
+                learned_buttons.get(btn, False) for btn in required_buttons
             )
 
-            if has_off and has_brightness:
+            if has_required_buttons:
                 entities.append(
                     BromicLight(
                         hub=hub,
@@ -78,13 +82,9 @@ async def async_setup_entry(
                 )
             else:
                 _LOGGER.warning(
-                    (
-                        "Skipping light ID%d - off/brightness not learned "
-                        "(OFF=%s, Brightness=%s)"
-                    ),
+                    "Skipping light ID%d - not all required buttons learned "
+                    "(100%%, 75%%, 50%%, 25%%, Off)",
                     id_location,
-                    has_off,
-                    has_brightness,
                 )
 
     if entities:
@@ -92,7 +92,7 @@ async def async_setup_entry(
 
 
 class BromicLight(BromicEntity, LightEntity):
-    """Representation of a Bromic dimmer controller light."""
+    """Representation of a Bromic dimmer controller light with discrete power levels."""
 
     def __init__(
         self,
@@ -126,81 +126,17 @@ class BromicLight(BromicEntity, LightEntity):
         # Keep entity name None so object_id derives from device name
         self._attr_name = None
 
-        # Determine available brightness levels based on learned buttons
-        self._available_levels = {}
-        for brightness, level_info in BRIGHTNESS_LEVELS.items():
-            button = level_info["button"]
-            if self._learned_buttons.get(button, False):
-                self._available_levels[brightness] = level_info
-
-        # Prepare dispatcher signal for syncing with power level select
-        self._level_signal = SIGNAL_LEVEL_FMT.format(
-            port_id=self._hub.port.replace("/", "_").replace(":", "_"),
-            id_location=id_location,
-        )
-        self._light_signal = SIGNAL_LIGHT_FMT.format(
-            port_id=self._hub.port.replace("/", "_").replace(":", "_"),
-            id_location=id_location,
-        )
-        self._level_unsub = None
-        self._light_unsub = None
-
-    def _on_level_change(self, option: str) -> None:
-        """Handle power level select changes to sync on/off state."""
-        if option == "Off":
-            self._attr_is_on = False
-            self._attr_brightness = 0
-        else:
-            # Set a representative brightness when level selected
-            name_to_brightness = {
-                info["name"]: b for b, info in BRIGHTNESS_LEVELS.items()
-            }
-            self._attr_brightness = name_to_brightness.get(option, 255)
-            self._attr_is_on = self._attr_brightness > 0
-        # Thread-safe state update (dispatcher may call from executor thread)
-        self.schedule_update_ha_state()
-
-    def _send_level_signal(self) -> None:
-        """Send signal to power level select to sync state."""
-        if self.hass:
-            # Determine current power level based on brightness
-            if self._attr_brightness == 0:
-                level_name = "Off"
+        # Create mapping of brightness levels to button codes
+        self._brightness_to_button = {}
+        for brightness in DISCRETE_BRIGHTNESS_LEVELS:
+            if brightness == 0:
+                button = OFF_BUTTON_CODE
             else:
-                # Find the closest brightness level name
-                brightness_to_name = {
-                    brightness: info["name"]
-                    for brightness, info in BRIGHTNESS_LEVELS.items()
-                }
-                level_name = brightness_to_name.get(self._attr_brightness, "100")
+                # Map brightness to button (255->1, 191->2, 128->3, 64->4)
+                button = BRIGHTNESS_LEVELS[brightness]["button"]
 
-            async_dispatcher_send(self.hass, self._level_signal, level_name)
-
-    async def async_added_to_hass(self) -> None:
-        """Connect dispatcher once hass is available."""
-        await super().async_added_to_hass()
-        if self.hass and self._level_unsub is None:
-            self._level_unsub = async_dispatcher_connect(
-                self.hass, self._level_signal, self._on_level_change
-            )
-        if self.hass and self._light_unsub is None:
-            self._light_unsub = async_dispatcher_connect(
-                self.hass, self._light_signal, self._on_level_change
-            )
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Disconnect dispatcher on removal."""
-        await super().async_will_remove_from_hass()
-        if self._level_unsub is not None:
-            try:
-                self._level_unsub()
-            finally:
-                self._level_unsub = None
-        if self._light_unsub is not None:
-            try:
-                self._light_unsub()
-            finally:
-                self._light_unsub = None
+            if self._learned_buttons.get(button, False):
+                self._brightness_to_button[brightness] = button
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -208,9 +144,10 @@ class BromicLight(BromicEntity, LightEntity):
         attrs = super().extra_state_attributes
         attrs.update(
             {
-                "available_levels": {
-                    str(brightness): info["name"]
-                    for brightness, info in self._available_levels.items()
+                "available_power_levels": {
+                    str(brightness): level_name
+                    for brightness, level_name in DISCRETE_BRIGHTNESS_LEVELS.items()
+                    if brightness in self._brightness_to_button
                 },
                 "learned_buttons": {
                     str(button): DIMMER_BUTTONS[button]["name"]
@@ -225,30 +162,37 @@ class BromicLight(BromicEntity, LightEntity):
         """Turn the light on."""
         brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
 
-        # Map HA brightness (0-255) to available Bromic levels
-        target_brightness = self._map_brightness_to_available(brightness)
-        button = self._available_levels[target_brightness]["button"]
+        # Map HA brightness to closest available discrete level
+        target_brightness = self._map_brightness_to_discrete(brightness)
+
+        if target_brightness not in self._brightness_to_button:
+            _LOGGER.warning(
+                "Cannot set brightness %d - button not learned for %s",
+                target_brightness,
+                DISCRETE_BRIGHTNESS_LEVELS[target_brightness],
+            )
+            return
+
+        button = self._brightness_to_button[target_brightness]
 
         _LOGGER.debug(
-            "Turning ON: %s (Brightness %d -> %d, Button %d)",
+            "Turning ON: %s (Brightness %d -> %s, Button %d)",
             self.entity_id,
             brightness,
-            target_brightness,
+            DISCRETE_BRIGHTNESS_LEVELS[target_brightness],
             button,
         )
 
         success = await self.async_send_command(button)
         if success:
-            self._attr_is_on = True
+            self._attr_is_on = target_brightness > 0
             self._attr_brightness = target_brightness
-            # Send signal to power level select to sync state
-            self._send_level_signal()
             self.async_write_ha_state()
 
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Turn the light off."""
-        if 0 in self._available_levels:
-            button = self._available_levels[0]["button"]  # Off button
+        if 0 in self._brightness_to_button:
+            button = self._brightness_to_button[0]  # Off button
 
             _LOGGER.debug("Turning OFF: %s (Button %d)", self.entity_id, button)
 
@@ -256,63 +200,30 @@ class BromicLight(BromicEntity, LightEntity):
             if success:
                 self._attr_is_on = False
                 self._attr_brightness = 0
-                # Send signal to power level select to sync state
-                self._send_level_signal()
                 self.async_write_ha_state()
         else:
             _LOGGER.warning(
                 "Cannot turn off %s - OFF button not learned", self.entity_id
             )
 
-    def _map_brightness_to_available(self, brightness: int) -> int:
+    def _map_brightness_to_discrete(self, brightness: int) -> int:
         """
-        Map HA brightness to closest available Bromic level.
+        Map HA brightness to closest available discrete level.
 
         Args:
             brightness: HA brightness (0-255)
 
         Returns:
-            Closest available brightness level
+            Closest available discrete brightness level
 
         """
         if brightness == 0:
             return 0
 
-        # Find closest available level
-        available_brightnesses = [b for b in self._available_levels if b > 0]
+        # Find closest available discrete level
+        available_brightnesses = [b for b in self._brightness_to_button if b > 0]
         if not available_brightnesses:
             return 255  # Fallback to max if no levels available
 
         # Find closest match
         return min(available_brightnesses, key=lambda x: abs(x - brightness))
-
-    async def async_dim_up(self) -> None:
-        """Increase brightness using dim up button."""
-        if self._learned_buttons.get(5, False):  # Dim Up button
-            _LOGGER.debug("Dim UP: %s (Button 5)", self.entity_id)
-
-            success = await self.async_send_command(5)
-            if success:
-                # Estimate new brightness (move to next higher level)
-                current = self._attr_brightness
-                available_higher = [b for b in self._available_levels if b > current]
-                if available_higher:
-                    self._attr_brightness = min(available_higher)
-                    self._attr_is_on = True
-                    self.async_write_ha_state()
-
-    async def async_dim_down(self) -> None:
-        """Decrease brightness using dim down button."""
-        if self._learned_buttons.get(6, False):  # Dim Down button
-            _LOGGER.debug("Dim DOWN: %s (Button 6)", self.entity_id)
-
-            success = await self.async_send_command(6)
-            if success:
-                # Estimate new brightness (move to next lower level)
-                current = self._attr_brightness
-                available_lower = [b for b in self._available_levels if b < current]
-                if available_lower:
-                    new_brightness = max(available_lower)
-                    self._attr_brightness = new_brightness
-                    self._attr_is_on = new_brightness > 0
-                    self.async_write_ha_state()

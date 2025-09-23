@@ -60,8 +60,6 @@ DIMMER_BUTTONS: Final = {
     2: {"name": "75%", "function": "set_brightness", "level": 75},
     3: {"name": "50%", "function": "set_brightness", "level": 50},
     4: {"name": "25%", "function": "set_brightness", "level": 25},
-    5: {"name": "Dim Up", "function": "dim_up"},
-    6: {"name": "Dim Down", "function": "dim_down"},
     8: {"name": "Off", "function": "turn_off"},
 }
 
@@ -75,7 +73,7 @@ BRIGHTNESS_LEVELS: Final = {
 }
 
 # Learning sequence for dimmer controllers (show Off last)
-BUTTON_SEQUENCE_DIMMER: Final = [1, 2, 3, 4, 5, 6, OFF_BUTTON_CODE]
+BUTTON_SEQUENCE_DIMMER: Final = [1, 2, 3, 4, OFF_BUTTON_CODE]
 
 # Error codes from Bromic documentation
 ERROR_CODES: Final = {
@@ -101,10 +99,6 @@ ERROR_RESPONSE_LENGTH: Final = 3
 MANUFACTURER: Final = "Bromic"
 MODEL: Final = "Smart Heat Link"
 SW_VERSION: Final = "Bridge"
-
-# Dispatcher signal format for syncing UI state across entities
-SIGNAL_LEVEL_FMT: Final = f"{DOMAIN}_level_{{port_id}}_{{id_location}}"
-SIGNAL_LIGHT_FMT: Final = f"{DOMAIN}_light_{{port_id}}_{{id_location}}"
 
 # Default configuration
 DEFAULT_NAME: Final = "Bromic Smart Heat Link"

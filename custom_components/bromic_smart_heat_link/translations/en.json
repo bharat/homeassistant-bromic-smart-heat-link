@@ -89,26 +89,6 @@
       "bromic_light": {
         "name": "Bromic Light"
       }
-    },
-    "button": {
-      "bromic_dim_up": {
-        "name": "Dim Up"
-      },
-      "bromic_dim_down": {
-        "name": "Dim Down"
-      }
-    },
-    "select": {
-      "bromic_power_level": {
-        "name": "Power Level",
-        "state": {
-          "off": "Off",
-          "25": "25%",
-          "50": "50%",
-          "75": "75%",
-          "100": "100%"
-        }
-      }
     }
   }
 }
