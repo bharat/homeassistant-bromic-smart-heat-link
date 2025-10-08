@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
       - name: Run hassfest validation
-        uses: home-assistant/actions/hassfest@342664e951e2fd5f00bc990fc968342388252475 # master
+        uses: home-assistant/actions/hassfest@e5c98268a8eab18c0ddb35d2e920585f042ee1fe # master
 
   hacs: # https://github.com/hacs/action
     name: HACS validation
