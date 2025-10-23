@@ -66,38 +66,8 @@ jobs:
             PR_TITLE=$(gh pr view $PR_NUM --json title --jq '.title')
             echo "PR #$PR_NUM Title: $PR_TITLE"
 
-            # Check if PR is safe to auto-merge
-            READY_TO_MERGE=false
-
-            # Only auto-merge patch updates and minor updates for dev dependencies
-            if echo "$PR_TITLE" | grep -E "(Bump|Update).*from.*to.*" > /dev/null; then
-              # Extract version numbers
-              FROM_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*from \([0-9.]*\).*/\1/p')
-              TO_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*to \([0-9.]*\).*/\1/p')
-
-              if [ -n "$FROM_VERSION" ] && [ -n "$TO_VERSION" ]; then
-                # Check if it's a patch update (same major.minor, different patch)
-                FROM_MAJOR_MINOR=$(echo "$FROM_VERSION" | cut -d. -f1-2)
-                TO_MAJOR_MINOR=$(echo "$TO_VERSION" | cut -d. -f1-2)
-
-                if [ "$FROM_MAJOR_MINOR" = "$TO_MAJOR_MINOR" ]; then
-                  READY_TO_MERGE=true
-                  echo "PR #$PR_NUM: Patch update detected: $FROM_VERSION -> $TO_VERSION"
-                fi
-              fi
-            fi
-
-            # Check if it's a dev dependency (ruff, pre-commit, etc.)
-            if echo "$PR_TITLE" | grep -E "(ruff|pre-commit|black|mypy|pytest)" > /dev/null; then
-              READY_TO_MERGE=true
-              echo "PR #$PR_NUM: Dev dependency update detected"
-            fi
-
-            if [ "$READY_TO_MERGE" = "false" ]; then
-              echo "PR #$PR_NUM: Major/minor update or unknown dependency - requires manual review"
-              gh pr comment $PR_NUM --body "🤖 Auto-merge skipped: This appears to be a major/minor update that requires manual review."
-              continue
-            fi
+            # All Dependabot PRs are eligible for auto-merge
+            echo "PR #$PR_NUM: Dependabot PR detected - checking mergeability"
 
             # Check if PR is mergeable
             MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
