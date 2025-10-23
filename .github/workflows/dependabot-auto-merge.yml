@@ -1,105 +1,23 @@
-name: Dependabot Auto-merge
-
-on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR number to process (leave empty to process all open Dependabot PRs)'
-        required: false
-        type: string
-  pull_request:
-    types: [opened, synchronize]
+name: Dependabot auto-merge
+on: pull_request
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  auto-merge:
+  dependabot:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]' || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'owner/my_repo'
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get PR number
-        id: pr_info
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-              echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
-            else
-              # Get all open Dependabot PRs
-              PR_NUMBERS=$(gh pr list --author dependabot[bot] --state open --json number --jq '.[].number' | tr '\n' ' ')
-              echo "pr_numbers=$PR_NUMBERS" >> $GITHUB_OUTPUT
-              echo "Found Dependabot PRs: $PR_NUMBERS"
-            fi
-          else
-            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          fi
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@d7267f607e9d3fb96fc2fbe83e0af444713e90b7
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Enable auto-merge for Dependabot PRs
+        if: contains(steps.metadata.outputs.dependency-names, 'my-dependency') && steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --auto --merge "$PR_URL"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Process PR
-        id: check
-        run: |
-          set -x  # Enable debug output
-          # Get PR number(s) to process
-          if [ -n "${{ steps.pr_info.outputs.pr_number }}" ]; then
-            PR_NUMBERS="${{ steps.pr_info.outputs.pr_number }}"
-          else
-            PR_NUMBERS="${{ steps.pr_info.outputs.pr_numbers }}"
-          fi
-
-          echo "Processing PR(s): $PR_NUMBERS"
-
-          for PR_NUM in $PR_NUMBERS; do
-            echo "Processing PR #$PR_NUM"
-
-            # Check if PR is from dependabot
-            PR_AUTHOR=$(gh pr view $PR_NUM --json author --jq '.author.login')
-            if [[ "$PR_AUTHOR" != "dependabot[bot]" && "$PR_AUTHOR" != "app/dependabot" ]]; then
-              echo "PR #$PR_NUM is not from Dependabot (author: $PR_AUTHOR)"
-              continue
-            fi
-
-            # Get PR title to check update type
-            PR_TITLE=$(gh pr view $PR_NUM --json title --jq '.title')
-            echo "PR #$PR_NUM Title: $PR_TITLE"
-
-            # All Dependabot PRs are eligible for auto-merge
-            echo "PR #$PR_NUM: Dependabot PR detected - checking mergeability"
-
-            # Check if PR is mergeable
-            MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
-            if [ "$MERGEABLE" != "true" ]; then
-              echo "PR #$PR_NUM: Not mergeable (status: $MERGEABLE) - checking if it's just behind base branch"
-
-              # If mergeable is null or false, it might just need a rebase
-              if [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE" = "false" ]; then
-                echo "PR #$PR_NUM: Attempting to rebase..."
-                gh pr comment $PR_NUM --body "@dependabot rebase"
-                echo "PR #$PR_NUM: Requested rebase from Dependabot"
-                continue
-              else
-                echo "PR #$PR_NUM: Not mergeable (conflicts)"
-                gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
-                continue
-              fi
-            fi
-
-            # Check status checks
-            STATUS_CHECKS=$(gh pr view $PR_NUM --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS" and .conclusion != "SKIPPED") | .name')
-            if [ -n "$STATUS_CHECKS" ]; then
-              echo "PR #$PR_NUM: Waiting for status checks: $STATUS_CHECKS"
-              gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
-              continue
-            fi
-
-            # Auto-merge the PR
-            echo "PR #$PR_NUM: Attempting to merge..."
-            gh pr merge $PR_NUM --squash --auto
-            echo "✅ Auto-merged Dependabot PR #$PR_NUM: $PR_TITLE"
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
