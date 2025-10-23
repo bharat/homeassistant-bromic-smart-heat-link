@@ -1,6 +1,12 @@
 name: Dependabot Auto-merge
 
 on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process (leave empty to process all open Dependabot PRs)'
+        required: false
+        type: string
   pull_request:
     types: [opened, synchronize]
 
@@ -11,88 +17,105 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' || github.event_name == 'workflow_dispatch'
     steps:
-      - name: Check if PR is safe to auto-merge
+      - name: Get PR number
+        id: pr_info
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+              echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+            else
+              # Get all open Dependabot PRs
+              PR_NUMBERS=$(gh pr list --author dependabot[bot] --state open --json number --jq '.[].number' | tr '\n' ' ')
+              echo "pr_numbers=$PR_NUMBERS" >> $GITHUB_OUTPUT
+              echo "Found Dependabot PRs: $PR_NUMBERS"
+            fi
+          else
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Process PR
         id: check
         run: |
-          # Check if PR is from dependabot
-          if [ "${{ github.actor }}" != "dependabot[bot]" ]; then
-            echo "ready=false" >> $GITHUB_OUTPUT
-            exit 0
+          # Get PR number(s) to process
+          if [ -n "${{ steps.pr_info.outputs.pr_number }}" ]; then
+            PR_NUMBERS="${{ steps.pr_info.outputs.pr_number }}"
+          else
+            PR_NUMBERS="${{ steps.pr_info.outputs.pr_numbers }}"
           fi
 
-          # Get PR title to check update type
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          echo "PR Title: $PR_TITLE"
+          echo "Processing PR(s): $PR_NUMBERS"
 
-          # Only auto-merge patch updates and minor updates for dev dependencies
-          if echo "$PR_TITLE" | grep -E "(Bump|Update).*from.*to.*" > /dev/null; then
-            # Extract version numbers
-            FROM_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*from \([0-9.]*\).*/\1/p')
-            TO_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*to \([0-9.]*\).*/\1/p')
+          for PR_NUM in $PR_NUMBERS; do
+            echo "Processing PR #$PR_NUM"
 
-            if [ -n "$FROM_VERSION" ] && [ -n "$TO_VERSION" ]; then
-              # Check if it's a patch update (same major.minor, different patch)
-              FROM_MAJOR_MINOR=$(echo "$FROM_VERSION" | cut -d. -f1-2)
-              TO_MAJOR_MINOR=$(echo "$TO_VERSION" | cut -d. -f1-2)
+            # Check if PR is from dependabot
+            PR_AUTHOR=$(gh pr view $PR_NUM --json author --jq '.author.login')
+            if [ "$PR_AUTHOR" != "dependabot[bot]" ]; then
+              echo "PR #$PR_NUM is not from Dependabot (author: $PR_AUTHOR)"
+              continue
+            fi
 
-              if [ "$FROM_MAJOR_MINOR" = "$TO_MAJOR_MINOR" ]; then
-                echo "ready=true" >> $GITHUB_OUTPUT
-                echo "Patch update detected: $FROM_VERSION -> $TO_VERSION"
-                exit 0
+            # Get PR title to check update type
+            PR_TITLE=$(gh pr view $PR_NUM --json title --jq '.title')
+            echo "PR #$PR_NUM Title: $PR_TITLE"
+
+            # Check if PR is safe to auto-merge
+            READY_TO_MERGE=false
+
+            # Only auto-merge patch updates and minor updates for dev dependencies
+            if echo "$PR_TITLE" | grep -E "(Bump|Update).*from.*to.*" > /dev/null; then
+              # Extract version numbers
+              FROM_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*from \([0-9.]*\).*/\1/p')
+              TO_VERSION=$(echo "$PR_TITLE" | sed -n 's/.*to \([0-9.]*\).*/\1/p')
+
+              if [ -n "$FROM_VERSION" ] && [ -n "$TO_VERSION" ]; then
+                # Check if it's a patch update (same major.minor, different patch)
+                FROM_MAJOR_MINOR=$(echo "$FROM_VERSION" | cut -d. -f1-2)
+                TO_MAJOR_MINOR=$(echo "$TO_VERSION" | cut -d. -f1-2)
+
+                if [ "$FROM_MAJOR_MINOR" = "$TO_MAJOR_MINOR" ]; then
+                  READY_TO_MERGE=true
+                  echo "PR #$PR_NUM: Patch update detected: $FROM_VERSION -> $TO_VERSION"
+                fi
               fi
             fi
-          fi
 
-          # Check if it's a dev dependency (ruff, pre-commit, etc.)
-          if echo "$PR_TITLE" | grep -E "(ruff|pre-commit|black|mypy|pytest)" > /dev/null; then
-            echo "ready=true" >> $GITHUB_OUTPUT
-            echo "Dev dependency update detected"
-            exit 0
-          fi
+            # Check if it's a dev dependency (ruff, pre-commit, etc.)
+            if echo "$PR_TITLE" | grep -E "(ruff|pre-commit|black|mypy|pytest)" > /dev/null; then
+              READY_TO_MERGE=true
+              echo "PR #$PR_NUM: Dev dependency update detected"
+            fi
 
-          echo "ready=false" >> $GITHUB_OUTPUT
-          echo "Major/minor update or unknown dependency - requires manual review"
+            if [ "$READY_TO_MERGE" = "false" ]; then
+              echo "PR #$PR_NUM: Major/minor update or unknown dependency - requires manual review"
+              gh pr comment $PR_NUM --body "🤖 Auto-merge skipped: This appears to be a major/minor update that requires manual review."
+              continue
+            fi
 
-      - name: Check PR status
-        if: steps.check.outputs.ready == 'true'
-        id: status
-        run: |
-          # Check if PR is mergeable
-          MERGEABLE=$(gh pr view ${{ github.event.pull_request.number }} --json mergeable --jq '.mergeable')
-          if [ "$MERGEABLE" != "true" ]; then
-            echo "mergeable=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+            # Check if PR is mergeable
+            MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
+            if [ "$MERGEABLE" != "true" ]; then
+              echo "PR #$PR_NUM: Not mergeable (conflicts)"
+              gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
+              continue
+            fi
 
-          # Check status checks
-          STATUS_CHECKS=$(gh pr view ${{ github.event.pull_request.number }} --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS" and .conclusion != "SKIPPED") | .name')
-          if [ -n "$STATUS_CHECKS" ]; then
-            echo "mergeable=false" >> $GITHUB_OUTPUT
-            echo "Waiting for status checks: $STATUS_CHECKS"
-            exit 0
-          fi
+            # Check status checks
+            STATUS_CHECKS=$(gh pr view $PR_NUM --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS" and .conclusion != "SKIPPED") | .name')
+            if [ -n "$STATUS_CHECKS" ]; then
+              echo "PR #$PR_NUM: Waiting for status checks: $STATUS_CHECKS"
+              gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
+              continue
+            fi
 
-          echo "mergeable=true" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Auto-merge PR
-        if: steps.check.outputs.ready == 'true' && steps.status.outputs.mergeable == 'true'
-        run: |
-          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
-          echo "✅ Auto-merged Dependabot PR: ${{ github.event.pull_request.title }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Comment on PR
-        if: steps.check.outputs.ready == 'false' || steps.status.outputs.mergeable == 'false'
-        run: |
-          if [ "${{ steps.check.outputs.ready }}" = "false" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "🤖 Auto-merge skipped: This appears to be a major/minor update that requires manual review."
-          else
-            gh pr comment ${{ github.event.pull_request.number }} --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
-          fi
+            # Auto-merge the PR
+            echo "PR #$PR_NUM: Attempting to merge..."
+            gh pr merge $PR_NUM --squash --auto
+            echo "✅ Auto-merged Dependabot PR #$PR_NUM: $PR_TITLE"
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
