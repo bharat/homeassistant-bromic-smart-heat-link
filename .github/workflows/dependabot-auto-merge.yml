@@ -1,4 +1,4 @@
-name: Dependabot Auto-merge (Conservative)
+name: Dependabot Auto-merge
 
 on:
   pull_request:
