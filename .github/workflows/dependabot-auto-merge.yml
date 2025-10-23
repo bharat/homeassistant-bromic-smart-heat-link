@@ -57,7 +57,7 @@ jobs:
 
             # Check if PR is from dependabot
             PR_AUTHOR=$(gh pr view $PR_NUM --json author --jq '.author.login')
-            if [ "$PR_AUTHOR" != "dependabot[bot]" ]; then
+            if [[ "$PR_AUTHOR" != "dependabot[bot]" && "$PR_AUTHOR" != "app/dependabot" ]]; then
               echo "PR #$PR_NUM is not from Dependabot (author: $PR_AUTHOR)"
               continue
             fi
