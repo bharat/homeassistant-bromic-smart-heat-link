@@ -72,9 +72,19 @@ jobs:
             # Check if PR is mergeable
             MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
             if [ "$MERGEABLE" != "true" ]; then
-              echo "PR #$PR_NUM: Not mergeable (conflicts)"
-              gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
-              continue
+              echo "PR #$PR_NUM: Not mergeable (status: $MERGEABLE) - checking if it's just behind base branch"
+
+              # If mergeable is null or false, it might just need a rebase
+              if [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE" = "false" ]; then
+                echo "PR #$PR_NUM: Attempting to rebase..."
+                gh pr comment $PR_NUM --body "@dependabot rebase"
+                echo "PR #$PR_NUM: Requested rebase from Dependabot"
+                continue
+              else
+                echo "PR #$PR_NUM: Not mergeable (conflicts)"
+                gh pr comment $PR_NUM --body "🤖 Auto-merge waiting: PR is not ready for merging (conflicts, failed checks, or not mergeable)"
+                continue
+              fi
             fi
 
             # Check status checks
