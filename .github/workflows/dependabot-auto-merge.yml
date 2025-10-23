@@ -43,6 +43,7 @@ jobs:
       - name: Process PR
         id: check
         run: |
+          set -x  # Enable debug output
           # Get PR number(s) to process
           if [ -n "${{ steps.pr_info.outputs.pr_number }}" ]; then
             PR_NUMBERS="${{ steps.pr_info.outputs.pr_number }}"
