@@ -34,6 +34,8 @@ A Home Assistant custom integration for controlling Bromic outdoor heaters via t
 4. Add this repository URL and select "Integration" as the category
 5. Install the integration and restart Home Assistant
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bharat&repository=homeassistant-bromic-smart-heat-link)
+
 ### Manual Installation
 
 1. Download the latest release
