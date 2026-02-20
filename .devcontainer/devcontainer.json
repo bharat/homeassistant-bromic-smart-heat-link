@@ -39,17 +39,17 @@
       }
     }
   },
+  "remoteEnv": {
+    "GIT_EDITOR": "cursor --wait"
+  },
   "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers-extra/features/apt-packages:1": {
-      "packages": "ffmpeg,libturbojpeg0,libpcap-dev"
+      "packages": "gh,ffmpeg,libturbojpeg0,libpcap-dev"
     },
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "moby": false
     }
-  },
-  "remoteEnv": {
-    "GIT_EDITOR": "cursor --wait"
   },
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
