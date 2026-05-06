@@ -74,19 +74,21 @@ def read_origin_from_git_config(repo_root: Path) -> str | None:
                     return url
 
     # Case 3: fallback to calling git
-    try:
-        proc = subprocess.run(
-            ("git", "config", "--get", "remote.origin.url"),
-            cwd=str(repo_root),
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        url = (proc.stdout or "").strip()
-        if url:
-            return url
-    except (FileNotFoundError, OSError):
-        pass
+    git_bin = shutil.which("git")
+    if git_bin:
+        try:
+            proc = subprocess.run(  # noqa: S603 — git_bin is PATH-resolved, args are static
+                (git_bin, "config", "--get", "remote.origin.url"),
+                cwd=str(repo_root),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            url = (proc.stdout or "").strip()
+            if url:
+                return url
+        except OSError:
+            pass
 
     return None
 
@@ -380,12 +382,13 @@ def rename_with_git_mv(old_path: Path, new_path: Path, repo_root: Path) -> bool:
     if new_path.exists():
         return False
     new_path.parent.mkdir(parents=True, exist_ok=True)
-    if is_git_repo(repo_root):
+    git_bin = shutil.which("git") if is_git_repo(repo_root) else None
+    if git_bin:
         try:
             # Use `-k` to skip errors for unrelated collisions; we guard above anyway
-            subprocess.run(  # noqa: S603 - fixed argv; no shell; trusted executable
+            subprocess.run(  # noqa: S603 — git_bin is PATH-resolved, args are static
                 (
-                    "git",
+                    git_bin,
                     "mv",
                     "-k",
                     "--",
