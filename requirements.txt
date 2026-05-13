@@ -1,7 +1,7 @@
 colorlog==6.10.1
-homeassistant==2025.2.4
+homeassistant==2026.4.4
 pip>=26.1.1
 ruff==0.15.12
 pre_commit==4.6.0
 serial==0.0.97
-pytest-homeassistant-custom-component==0.13.214
+pytest-homeassistant-custom-component==0.13.325

@@ -271,5 +271,5 @@ class BromicProtocol:
                 id_location=id_location, button_code=button_code, raw_bytes=data
             )
 
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return None

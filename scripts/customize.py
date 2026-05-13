@@ -36,7 +36,7 @@ def read_origin_from_git_config(repo_root: Path) -> str | None:
         parser = configparser.ConfigParser()
         try:
             parser.read(config_path)
-        except (OSError, configparser.Error):
+        except OSError, configparser.Error:
             return None
         for section in parser.sections():
             if section.strip() == 'remote "origin"' and parser.has_option(
@@ -169,7 +169,7 @@ def replace_text_in_file(path: Path, replacements: tuple[tuple[str, str], ...]) 
     """Replace simple string pairs in a text file; return True if changed."""
     try:
         text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return False
     original = text
     for old, new in replacements:
@@ -189,7 +189,7 @@ def update_manifest(manifest_path: Path, domain: str, display_name: str) -> None
         return
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except OSError, UnicodeDecodeError, json.JSONDecodeError:
         return
     changed = False
     if data.get("domain") != domain:
@@ -215,7 +215,7 @@ def ensure_cursor_editor_in_devcontainer(repo_root: Path) -> None:
         return
     try:
         cfg = json.loads(devcontainer.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except OSError, UnicodeDecodeError, json.JSONDecodeError:
         return
     remote_env = cfg.get("remoteEnv", {})
     if remote_env.get("GIT_EDITOR") != "cursor":
@@ -238,7 +238,7 @@ def update_vscode_extensions_in_devcontainer(
         return
     try:
         cfg = json.loads(devcontainer.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except OSError, UnicodeDecodeError, json.JSONDecodeError:
         return
     customizations = cfg.setdefault("customizations", {})
     vscode = customizations.setdefault("vscode", {})
@@ -273,7 +273,7 @@ def ensure_line_in_file(path: Path, line: str) -> bool:
     """Append `line` to file if not already present; returns True if changed."""
     try:
         text = path.read_text(encoding="utf-8") if path.exists() else ""
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return False
     if line in text:
         return False
@@ -297,7 +297,7 @@ def ensure_precommit_requirement(req_path: Path, version_pin: str = "3.5.0") -> 
             if req_path.exists()
             else []
         )
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return False
     pin_line = f"pre_commit=={version_pin}"
     changed = False
@@ -335,7 +335,7 @@ def ensure_dod_in_devcontainer(repo_root: Path) -> bool:
         return False
     try:
         cfg = json.loads(devcontainer.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except OSError, UnicodeDecodeError, json.JSONDecodeError:
         return False
 
     changed = False
@@ -398,7 +398,7 @@ def rename_with_git_mv(old_path: Path, new_path: Path, repo_root: Path) -> bool:
                 cwd=str(repo_root),
                 check=True,
             )
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except subprocess.CalledProcessError, FileNotFoundError:
             shutil.move(str(old_path), str(new_path))
         else:
             return True
