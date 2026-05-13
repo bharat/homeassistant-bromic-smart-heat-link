@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.raw:
         try:
             frame = binascii.unhexlify(args.raw.replace(" ", ""))
-        except (binascii.Error, ValueError):
+        except binascii.Error, ValueError:
             sys.stderr.write("Invalid --raw hex string\n")
             return 2
     else:
