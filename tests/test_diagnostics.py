@@ -4,14 +4,6 @@ Critical assertions:
 - The serial port is redacted (it can contain identifying USB IDs).
 - Hub stats are surfaced.
 - Controller metadata is summarized (type + learned button count).
-
-**Known production bug** (discovered while writing these tests, not fixed
-here per the tests-only constraint): `diagnostics.py:43` uses
-`hass.helpers.entity_registry.async_get(hass)` — the deprecated/removed
-HA helpers API. Under HA 2026.4.4, this raises `AttributeError`. These
-tests mock `hass.helpers` to exercise the rest of the payload shape; the
-real diagnostics endpoint would crash in production. Tracked separately
-for a follow-up fix.
 """
 
 from __future__ import annotations
@@ -54,13 +46,6 @@ async def test_serial_port_redacted_in_data(hass: HomeAssistant) -> None:
     hub.stats = {"commands_sent": 5}
     hass.data[DOMAIN] = {entry.entry_id: {"hub": hub}}
 
-    # Mock the deprecated hass.helpers.entity_registry path that diagnostics.py
-    # still calls. See module-level docstring; this is a known production bug.
-    fake_registry = MagicMock()
-    fake_registry.entities.values.return_value = []
-    hass.helpers = MagicMock()
-    hass.helpers.entity_registry.async_get.return_value = fake_registry
-
     diag = await async_get_config_entry_diagnostics(hass, entry)
     # Redacted form is **REDACTED** (HA's standard sentinel).
     assert diag["config_entry"]["data"][CONF_SERIAL_PORT] != "/dev/ttyUSB0"
@@ -80,13 +65,6 @@ async def test_hub_port_redacted_in_hub_section(hass: HomeAssistant) -> None:
     hub.port = "/dev/ttyUSB0"
     hub.stats = {"commands_sent": 0}
     hass.data[DOMAIN] = {entry.entry_id: {"hub": hub}}
-
-    # Mock the deprecated hass.helpers.entity_registry path that diagnostics.py
-    # still calls. See module-level docstring; this is a known production bug.
-    fake_registry = MagicMock()
-    fake_registry.entities.values.return_value = []
-    hass.helpers = MagicMock()
-    hass.helpers.entity_registry.async_get.return_value = fake_registry
 
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["hub"]["port"] != "/dev/ttyUSB0"
@@ -110,13 +88,6 @@ async def test_hub_stats_surface(hass: HomeAssistant) -> None:
         "commands_failed": 2,
     }
     hass.data[DOMAIN] = {entry.entry_id: {"hub": hub}}
-
-    # Mock the deprecated hass.helpers.entity_registry path that diagnostics.py
-    # still calls. See module-level docstring; this is a known production bug.
-    fake_registry = MagicMock()
-    fake_registry.entities.values.return_value = []
-    hass.helpers = MagicMock()
-    hass.helpers.entity_registry.async_get.return_value = fake_registry
 
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["hub"]["connected"] is True
@@ -157,13 +128,6 @@ async def test_controllers_summary(hass: HomeAssistant) -> None:
     hub.port = "/dev/ttyUSB0"
     hub.stats = {}
     hass.data[DOMAIN] = {entry.entry_id: {"hub": hub}}
-
-    # Mock the deprecated hass.helpers.entity_registry path that diagnostics.py
-    # still calls. See module-level docstring; this is a known production bug.
-    fake_registry = MagicMock()
-    fake_registry.entities.values.return_value = []
-    hass.helpers = MagicMock()
-    hass.helpers.entity_registry.async_get.return_value = fake_registry
 
     diag = await async_get_config_entry_diagnostics(hass, entry)
 
