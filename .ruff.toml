@@ -23,3 +23,17 @@ keep-runtime-typing = true
 
 [lint.mccabe]
 max-complexity = 25
+
+[lint.per-file-ignores]
+# Tests use asserts, magic numbers, private internals, and pytest fixture
+# injection that violates the global ANN/ARG rules in benign ways.
+"tests/**" = [
+    "S101",     # assert statements
+    "PLR2004",  # magic value used in comparison
+    "SLF001",   # private member accessed
+    "ANN001",   # missing-type-function-argument (pytest fixtures)
+    "ANN201",   # missing-return-type-undocumented-public-function
+    "ARG001",   # unused-function-argument (pytest fixture injection)
+    "ARG002",   # unused-method-argument
+    "D213",     # multi-line-docstring-summary-second-line (style)
+]
