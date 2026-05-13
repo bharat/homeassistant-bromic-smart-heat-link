@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.helpers import entity_registry as er
 
 from .const import CONF_SERIAL_PORT, DOMAIN
 
@@ -40,7 +41,7 @@ async def async_get_config_entry_diagnostics(
         }
 
     # Collect entity information
-    entity_registry = hass.helpers.entity_registry.async_get(hass)
+    entity_registry = er.async_get(hass)
     entities = [
         {
             "entity_id": entity_entry.entity_id,
