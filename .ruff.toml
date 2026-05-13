@@ -26,14 +26,25 @@ max-complexity = 25
 
 [lint.per-file-ignores]
 # Tests use asserts, magic numbers, private internals, and pytest fixture
-# injection that violates the global ANN/ARG rules in benign ways.
+# injection that violates the global ANN/ARG/D rules in benign ways.
 "tests/**" = [
     "S101",     # assert statements
     "PLR2004",  # magic value used in comparison
     "SLF001",   # private member accessed
     "ANN001",   # missing-type-function-argument (pytest fixtures)
     "ANN201",   # missing-return-type-undocumented-public-function
+    "ANN202",   # missing-return-type-private-function
     "ARG001",   # unused-function-argument (pytest fixture injection)
     "ARG002",   # unused-method-argument
+    "E501",     # line-too-long (test docstrings can be slightly verbose)
+    "D101",     # undocumented-public-class
+    "D102",     # undocumented-public-method
+    "D103",     # undocumented-public-function
     "D213",     # multi-line-docstring-summary-second-line (style)
+    "EM101",    # raw-string-in-exception (test stub messages)
+    "FBT001",   # boolean-type-hint-positional-argument
+    "N802",     # invalid-function-name (test_… can violate)
+    "PLC0415",  # import-outside-top-level (deferred imports in tests)
+    "PT017",    # pytest-assert-in-except (when validating exception path)
+    "RUF002",   # ambiguous-unicode-character-docstring
 ]
