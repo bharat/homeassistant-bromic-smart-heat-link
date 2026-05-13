@@ -100,16 +100,17 @@ python3 scripts/serial_test.py                       # Hard-coded round-trip
 
 ## Releases
 
-Tags use **SemVer**: `v<MAJOR>.<MINOR>.<PATCH>` (e.g. `v0.1.2`). Release titles are **bare** with no project prefix — match `v0.1.2` exactly. (This differs from sister projects like `Lockly v…` and `Triad AMS v…` — preserve the bare convention here unless bharat says otherwise.)
+Tags use **CalVer**: `v<YYYY>.<M>.<DD>` (e.g. `v2026.5.13`). Release titles use `Bromic v<YYYY>.<M>.<DD>` (e.g. `Bromic v2026.5.13`). Matches the fleet-wide HA-integration convention (triad-ams set the canonical shape). Historical `v0.1.x` tags stay as-is — the CalVer convention applies going forward only.
 
 There is no automated release workflow in `.github/workflows/`. Cutting a release is manual:
 
 ```bash
 # 1. Bump version in custom_components/bromic_smart_heat_link/manifest.json
 # 2. Commit, push, get the bump merged
-git tag v0.1.3                                       # Match manifest version
-git push origin v0.1.3
-gh release create v0.1.3 --title "v0.1.3" --notes "..."   # Use the body format below
+DATE=$(date -u +%Y.%-m.%d)                           # e.g. 2026.5.13
+git tag "v${DATE}"
+git push origin "v${DATE}"
+gh release create "v${DATE}" --title "Bromic v${DATE}" --notes "..."   # body format below
 ```
 
 Build the GitHub release body in three parts:
