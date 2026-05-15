@@ -10,12 +10,12 @@ A Home Assistant custom integration for controlling Bromic outdoor heaters via t
 
 ## Features
 
-- **Full Controller Support**: Works with both ON/OFF (4-button) and Dimmer (7-button) controllers
-- **Multiple Controllers**: Support for up to 11 controller ID locations
-- **Guided Learning Process**: Easy-to-follow wizard for pairing with your existing remote controls
-- **Simplified Entity Design**: Single dimmer for each heater with 5 levels (Off, 25%, 50%, 75%, 100%)
-- **Diagnostics**: Built-in diagnostics and error reporting
-- **Services**: Developer services for testing and manual control
+- Works with both ON/OFF (4-button) and Dimmer (7-button) controllers.
+- Up to 50 controller ID locations per bridge.
+- Guided pairing wizard for adopting your existing remote controls.
+- One light entity per heater with five discrete power levels: Off, 25%, 50%, 75%, 100%.
+- Built-in diagnostics and error reporting.
+- Developer services for testing and manual control.
 
 ## Hardware Requirements
 
@@ -93,11 +93,7 @@ Each controller creates a single entity identified by its ID location.
 ### Dimmer Controllers
 - `light.bromic_id{X}` - Single light entity with discrete power levels
 
-The dimmer light entity provides:
-- **Discrete brightness levels**: Off, 25%, 50%, 75%, 100%
-- **Direct power level control**: No separate power level selector needed
-- **Intuitive brightness slider**: Maps directly to heater power levels
-- **Clear state indication**: Shows current power level in the UI
+The dimmer light entity exposes the five heater power levels (Off, 25%, 50%, 75%, 100%) directly on the HA brightness slider — moving the slider sets the heater's power level, and the entity state reflects the current level.
 
 ## Usage Examples
 
