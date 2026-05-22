@@ -51,9 +51,21 @@ Up to 50 ID locations are supported per bridge. Connection is local-only (no clo
 │   ├── customize.py            # Blueprint repo customizer (one-shot init tool; not used in dev)
 │   └── __init__.py             # Marks scripts/ as a Python package
 │
+├── tests/                      # pytest suite (163 tests) using pytest-homeassistant-custom-component
+│   ├── conftest.py             # Enables custom-integration discovery; loads the pytest-HA plugin
+│   ├── test_smoke.py           # Loads the integration under the pinned HA version; expects SETUP_RETRY
+│   ├── test_protocol.py        # Pure-function encode/decode/checksum and frame validation
+│   ├── test_hub.py             # BromicHub with mocked serial.Serial: connect, send, retry, locking
+│   ├── test_config_flow.py     # User step, manual port entry, add/adopt, learning wizard (hub mocked)
+│   ├── test_light.py / test_switch.py / test_entity.py
+│   ├── test_services.py        # learn_button, clear_controller, send_raw_command (hub mocked)
+│   ├── test_diagnostics.py     # Payload shape, serial-port redaction
+│   ├── test_const.py           # Protocol constants, button maps, brightness LUT, error codes
+│   └── test_exceptions.py      # Exception hierarchy and BromicCommandError.error_code
+│
 ├── .pre-commit-config.yaml     # ruff + EOF/whitespace + check-yaml
 ├── .ruff.toml                  # Per-project ruff config
-└── requirements.txt            # HA, ruff, pre-commit (note: requires `serial` alias of pyserial)
+└── requirements.txt            # HA, ruff, pre-commit, pyserial, pytest-homeassistant-custom-component
 ```
 
 ## Dev workflow
@@ -66,7 +78,10 @@ pre-commit install
 ./scripts/lint                                      # ruff format + ruff check --fix
 pre-commit run --all-files
 
-# Run HA against the integration (no real serial device — UI testing only)
+# Tests (163 unit tests, no hardware required, ~10s)
+pytest tests/
+
+# Run HA against the integration (no real serial device, UI testing only)
 ./scripts/develop                                   # http://localhost:8123
 
 # To exercise the integration with a REAL Bromic bridge, you need a serial
@@ -83,13 +98,13 @@ python3 scripts/serial_test.py                       # Hard-coded round-trip
 
 ## Conventions and gotchas
 
-- **No `tests/` directory.** This is intentional, not an oversight: there is no fake-device simulator and no unit-test harness. Validation is **manual against real hardware** (or via `scripts/serial_test.py` / `serial_send.py` against a real bridge). If you add Python logic that's testable in isolation (e.g. protocol encode/decode), feel free to start a `tests/` directory and a pytest harness — just don't claim you've "tested" anything you haven't actually run on a real bridge.
+- **`tests/` is a pure unit-test suite, no hardware in the loop.** All 163 tests run in CI in under 15 seconds and mock the serial layer. The smoke test (`test_smoke.py`) deliberately reaches `BromicHub.async_connect()` with a bogus port and asserts the integration enters `ConfigEntryState.SETUP_RETRY` (the documented failure path). Real-hardware validation against a Bromic bridge is still required before cutting a release; use `scripts/serial_test.py` / `serial_send.py` for that.
+- **Tests are additive only by default.** If you're tempted to refactor production code to make a test easier, prefer adding a mock or fixture instead. The integration is deployed to real heater hardware; production behavior changes need separate, deliberate PRs.
 - **Serial tunnel is the dev pattern, not a hack.** Devcontainers can't see host `/dev/tty*` devices, so `scripts/tty-bridge-{host,container}.sh` use `socat` to bridge the bridge. `socat.log` is a runtime artifact from those scripts.
-- **`socat.log` is in the working tree but not in `.gitignore`.** It shouldn't be committed; if it shows up in `git status`, add `*.log` to `.gitignore` rather than checking it in. (Don't delete the existing `socat.log` without asking bharat — investigate first.)
-- **Brightness mapping is discrete.** `const.py` maps HA's 0–255 brightness scale to 5 device levels (0/64/128/191/255 → 0/25/50/75/100%). Don't try to interpolate finer — the hardware doesn't accept it.
-- **`requirements.txt` lists `serial==0.0.97`** — that's the *deprecated alias* package on PyPI, not pyserial. The integration's `manifest.json` correctly requires `pyserial>=3.5`. Don't "fix" the requirements.txt entry without checking whether it's compensating for something in the toolchain.
-- **`scripts/customize.py` is a one-shot template-init tool** from the integration_blueprint scaffold. Don't run it again — it'd ask interactive questions and overwrite identifiers.
-- **No retries beyond 3.** Hub retries each command up to 3 times with a 0.1s inter-frame delay, then surfaces a `BromicTimeoutError`. Don't add unbounded retry — outdoor heaters that misfire are a safety concern.
+- **`socat.log` is in the working tree but not in `.gitignore`.** It shouldn't be committed; if it shows up in `git status`, add `*.log` to `.gitignore` rather than checking it in. (Don't delete the existing `socat.log` without asking bharat, investigate first.)
+- **Brightness mapping is discrete.** `const.py` maps HA's 0-255 brightness scale to 5 device levels (0/64/128/191/255 → 0/25/50/75/100%). Don't try to interpolate finer, the hardware doesn't accept it.
+- **`scripts/customize.py` is a one-shot template-init tool** from the integration_blueprint scaffold. Don't run it again, it'd ask interactive questions and overwrite identifiers.
+- **No retries beyond 3.** Hub retries each command up to 3 times with a 0.1s inter-frame delay, then surfaces a `BromicTimeoutError`. Don't add unbounded retry, outdoor heaters that misfire are a safety concern.
 - **`country: ["US", "AU", "NZ", "CA", "GB"]`** in `hacs.json`. If you add region-specific behavior, update this.
 
 ## Existing docs
@@ -125,7 +140,7 @@ Reference example (sister project, different title format): https://github.com/b
 
 ## What NOT to touch
 
-- `socat.log` — investigate before deleting; it's the trailing artifact of dev sessions and not currently `.gitignore`d.
-- `scripts/customize.py` — one-shot template init; running it again will ask interactive questions and overwrite identifiers.
-- The 3-retry / 0.1s inter-frame timing in `hub.py` — see "no retries beyond 3" above (safety).
-- `requirements.txt`'s `serial==0.0.97` — likely intentional; investigate before "fixing."
+- `socat.log`: investigate before deleting; it's the trailing artifact of dev sessions and not currently `.gitignore`d.
+- `scripts/customize.py`: one-shot template init; running it again will ask interactive questions and overwrite identifiers.
+- The 3-retry / 0.1s inter-frame timing in `hub.py`: see "no retries beyond 3" above (safety).
+- Production code under `custom_components/bromic_smart_heat_link/` when the task is to add or fix tests; tests should adapt to production behavior, not the other way around.
