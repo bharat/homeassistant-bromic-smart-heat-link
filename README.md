@@ -1,9 +1,9 @@
 # Bromic Smart Heat Link Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![Brand](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/brand-validation.yml/badge.svg)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/brand-validation.yml)
-[![Lint](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/lint.yml/badge.svg)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/lint.yml)
-[![Validate](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/validate.yml/badge.svg)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/validate.yml)
+[![Brand](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/brand-validation.yml/badge.svg?branch=main)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/brand-validation.yml?query=branch%3Amain)
+[![Lint](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/lint.yml?query=branch%3Amain)
+[![Validate](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/actions/workflows/validate.yml?query=branch%3Amain)
 [![Release](https://img.shields.io/github/v/release/bharat/homeassistant-bromic-smart-heat-link?sort=semver)](https://github.com/bharat/homeassistant-bromic-smart-heat-link/releases)
 
 A Home Assistant custom integration for controlling Bromic outdoor heaters via the Bromic Smart Heat Link device using RS232 serial communication.
