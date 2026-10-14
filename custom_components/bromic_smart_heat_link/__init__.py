@@ -48,11 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "hub": hub,
     }
 
-    # Ensure a parent "bridge" device exists for this serial port so that
-    # entity DeviceInfo.via_device references a valid device
+    # Ensure a parent "bridge" device exists for this serial port; entities
+    # link their devices to it through DeviceInfo.via_device_id.
     port_id = hub.port.replace("/", "_").replace(":", "_")
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
+    bridge_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, port_id)},
         name=f"Bromic Bridge ({hub.port})",
@@ -60,6 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         model=f"{MODEL} Bridge",
         sw_version=SW_VERSION,
     )
+    hass.data[DOMAIN][entry.entry_id]["bridge_device_id"] = bridge_device.id
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

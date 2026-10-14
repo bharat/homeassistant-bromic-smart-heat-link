@@ -78,6 +78,7 @@ async def async_setup_entry(
                         id_location=id_location,
                         controller_type=controller_type,
                         learned_buttons=learned_buttons,
+                        via_device_id=hub_data.get("bridge_device_id"),
                     )
                 )
             else:
@@ -100,6 +101,7 @@ class BromicLight(BromicEntity, LightEntity):
         id_location: int,
         controller_type: str,
         learned_buttons: dict[int, bool],
+        via_device_id: str | None = None,
     ) -> None:
         """
         Initialize the light.
@@ -109,9 +111,10 @@ class BromicLight(BromicEntity, LightEntity):
             id_location: ID location (1-50)
             controller_type: Controller type
             learned_buttons: Dictionary of learned buttons
+            via_device_id: Device registry id of the bridge device
 
         """
-        super().__init__(hub, id_location, controller_type, "light")
+        super().__init__(hub, id_location, controller_type, "light", via_device_id)
 
         self._learned_buttons = learned_buttons
 
