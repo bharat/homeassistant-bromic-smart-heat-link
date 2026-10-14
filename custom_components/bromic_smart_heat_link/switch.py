@@ -60,6 +60,7 @@ async def async_setup_entry(
                         controller_type=controller_type,
                         on_button=on_button,
                         off_button=off_button,
+                        via_device_id=hub_data.get("bridge_device_id"),
                     )
                 )
             else:
@@ -80,13 +81,15 @@ async def async_setup_entry(
 class BromicSwitch(BromicEntity, SwitchEntity):
     """Representation of a Bromic ON/OFF controller switch."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - mirrors BromicEntity plus the two button codes
         self,
         hub: BromicHub,
         id_location: int,
         controller_type: str,
         on_button: int,
         off_button: int,
+        *,
+        via_device_id: str | None = None,
     ) -> None:
         """
         Initialize the switch.
@@ -97,9 +100,10 @@ class BromicSwitch(BromicEntity, SwitchEntity):
             controller_type: Controller type
             on_button: Button code for turning ON
             off_button: Button code for turning OFF
+            via_device_id: Device registry id of the bridge device
 
         """
-        super().__init__(hub, id_location, controller_type, "switch")
+        super().__init__(hub, id_location, controller_type, "switch", via_device_id)
 
         self._on_button = on_button
         self._off_button = off_button

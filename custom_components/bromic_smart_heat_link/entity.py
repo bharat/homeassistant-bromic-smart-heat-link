@@ -34,6 +34,7 @@ class BromicEntity(Entity):
         id_location: int,
         controller_type: str,
         entity_type: str,
+        via_device_id: str | None = None,
     ) -> None:
         """
         Initialize the entity.
@@ -43,6 +44,8 @@ class BromicEntity(Entity):
             id_location: ID location (1-50)
             controller_type: Controller type (onoff/dimmer)
             entity_type: Entity type for naming
+            via_device_id: Device registry id of the bridge device this
+                device connects through (created in async_setup_entry)
 
         """
         self._hub = hub
@@ -63,15 +66,19 @@ class BromicEntity(Entity):
         # primary entity's object_id derive solely from the device name.
         self._attr_name = None
 
-        # Device info
-        self._attr_device_info = DeviceInfo(
+        # Device info. The bridge link uses via_device_id (a device registry
+        # id) because the identifier-tuple via_device parameter is deprecated
+        # for removal in core 2027.8.
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{port_id}_{id_location}")},
             name=device_name,
             manufacturer=MANUFACTURER,
             model=f"{MODEL} ({controller_type.upper()})",
             sw_version=SW_VERSION,
-            via_device=(DOMAIN, port_id),
         )
+        if via_device_id is not None:
+            device_info["via_device_id"] = via_device_id
+        self._attr_device_info = device_info
 
         # State tracking
         self._attr_available = True

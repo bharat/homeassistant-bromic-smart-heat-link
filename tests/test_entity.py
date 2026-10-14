@@ -31,12 +31,15 @@ def _make_hub(
     return hub
 
 
-def _make_entity(hub: MagicMock, id_location: int = 5) -> BromicEntity:
+def _make_entity(
+    hub: MagicMock, id_location: int = 5, via_device_id: str | None = None
+) -> BromicEntity:
     return BromicEntity(
         hub=hub,
         id_location=id_location,
         controller_type="onoff",
         entity_type="switch",
+        via_device_id=via_device_id,
     )
 
 
@@ -62,11 +65,19 @@ class TestIdentifiers:
         identifiers = entity.device_info["identifiers"]
         assert (DOMAIN, "_dev_ttyUSB0_12") in identifiers
 
-    def test_device_info_via_device_links_to_bridge(self) -> None:
+    def test_device_info_via_device_id_links_to_bridge(self) -> None:
+        hub = _make_hub(port="/dev/ttyUSB0")
+        entity = _make_entity(hub, id_location=1, via_device_id="bridge-registry-id")
+        # via_device_id carries the bridge's device registry id (the
+        # identifier-tuple via_device parameter is deprecated in core).
+        assert entity.device_info["via_device_id"] == "bridge-registry-id"
+        assert "via_device" not in entity.device_info
+
+    def test_device_info_omits_via_device_id_when_unknown(self) -> None:
         hub = _make_hub(port="/dev/ttyUSB0")
         entity = _make_entity(hub, id_location=1)
-        # via_device points at the bridge for this serial port (without ID suffix).
-        assert entity.device_info["via_device"] == (DOMAIN, "_dev_ttyUSB0")
+        assert "via_device_id" not in entity.device_info
+        assert "via_device" not in entity.device_info
 
     def test_device_info_name_includes_id(self) -> None:
         hub = _make_hub()
