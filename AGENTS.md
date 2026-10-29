@@ -18,7 +18,7 @@ Up to 50 ID locations are supported per bridge. Connection is local-only (no clo
 │
 ├── custom_components/bromic_smart_heat_link/
 │   ├── __init__.py             # async_setup_entry; sets PLATFORMS=[SWITCH, LIGHT]
-│   ├── manifest.json           # Domain bromic_smart_heat_link; requires pyserial>=3.5
+│   ├── manifest.json           # Domain bromic_smart_heat_link; no manifest requirements (pyserial ships with HA)
 │   ├── const.py                # Serial config, protocol bytes, button maps, brightness LUT, errors
 │   ├── protocol.py             # BromicProtocol: encode_command, decode_response, checksum, frame validation
 │   ├── hub.py                  # BromicHub: serial I/O, retry, stats, connection callbacks
